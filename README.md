@@ -8,7 +8,7 @@ This script is an expanded version from the initial script created by Grauw: htt
 
 - Copy the script in the scripts directory from the openmsx profile directory, where ever that might be. On OSX it's ~/.openMSX/share/scripts.
 - Start OpenMSX, the script will be loaded automagically.
-- Start recording the VGM data using vgm_rec <filename> <AY8910 0/1> <YM2413 0/1> <Y8950 0/1> <YMF278B 0/1>.
+- Start recording the VGM data using vgm_rec filename <AY8910 0/1> <YM2413 0/1> <Y8950 0/1> <YMF278B 0/1>.
 - Some defaults are in place; without any arguments it will record to /tmp/music.vgm with AY8910 and FM2413 enabled.
 - So if you want to record Moonsound music in /tmp/test.vgm: vgm_rec /tmp/test.vgm 0 0 0 1.
 - If you want to end the recording just type vgm_rec_end. This is required, without doing that the VGM file header won't be written.
