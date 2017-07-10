@@ -2,11 +2,11 @@
 
 A TCL script for OpenMSX to export AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module) and YMF278B (OPL4, Moonsound) music to VGM
 
-This script is an expanded version from the initial script created by Grauw: https://bitbucket.org/grauw/vgmplay-msx/src/tip/tools/vgmrec.tcl?at=default&fileviewer=file-view-default
+This script is an expanded version from the script created by Grauw: https://bitbucket.org/grauw/vgmplay-msx/src/tip/tools/vgmrec.tcl?at=default&fileviewer=file-view-default, which was in turn an expansion of the script by Ricbit; https://github.com/ricbit/Oldies/blob/master/2014-11-grabfm/grabfm.tcl
 
 # How to use it
 
-- Copy the script in the scripts directory from the openmsx profile directory, where ever that might be. On OSX it's ~/.openMSX/share/scripts.
+- Copy the script in the scripts directory in the openmsx profile directory, where ever that might be. On OSX it's ~/.openMSX/share/scripts.
 - Start OpenMSX, the script will be loaded automagically.
 - Start recording the VGM data using vgm_rec <filename\> <AY8910 0/1> <YM2413 0/1> <Y8950 0/1> <YMF278B 0/1>.
 - Some defaults are in place; without any arguments it will record to /tmp/music.vgm with AY8910 and FM2413 enabled.
