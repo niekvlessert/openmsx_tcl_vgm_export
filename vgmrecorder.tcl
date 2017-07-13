@@ -29,6 +29,7 @@ namespace eval vgm {
 	variable watchpoint_opl4_data_1
 	variable watchpoint_opl4_address_2
 	variable watchpoint_opl4_data_2
+        variable watchpoint_scc_data
 
 	variable watchpoint_isr
 
@@ -43,7 +44,7 @@ namespace eval vgm {
 		string repeat "\0" $value
 	}
 
-	proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0}} {
+	proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 0} {fmlogged 0} {y8950logged 0} {moonsoundlogged 0} {scclogged 1}} {
 		variable active
 
 		variable psg_register
@@ -62,6 +63,7 @@ namespace eval vgm {
 		variable fm_logged
 		variable y8950_logged
 		variable moonsound_logged
+		variable scc_logged
 
 		variable watchpoint_psg_address
 		variable watchpoint_psg_data
@@ -73,6 +75,7 @@ namespace eval vgm {
 		variable watchpoint_opl4_data_1
 		variable watchpoint_opl4_address_2
 		variable watchpoint_opl4_data_2
+		variable watchpoint_scc_data
 
 		variable watchpoint_isr
 
@@ -95,6 +98,7 @@ namespace eval vgm {
 		set fm_logged $fmlogged
 		set y8950_logged $y8950logged
 		set moonsound_logged $moonsoundlogged
+		set scc_logged $scclogged
 
 		if {$psg_logged == 1} {
 			set watchpoint_psg_address [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
@@ -122,6 +126,10 @@ namespace eval vgm {
 			set watchpoint_opl4_data_1 [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_1}]
 			set watchpoint_opl4_address_2 [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
 			set watchpoint_opl4_data_2 [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data_2}]
+		}
+
+		if {$scc_logged == 1} {
+			set watchpoint_scc_data [debug set_watchpoint write_mem {0x9800 0x988f} {[watch_in_slot 1 0]} {vgm::scc_data}]
 		}
 
 		if {!$sample_accurate} {
@@ -210,6 +218,55 @@ namespace eval vgm {
 		}
 	}
 
+	proc scc_data {} {
+		variable music_data
+                
+		# if 9800h is written, waveform channel 1 is set in 9800h - 981fh, 32 bytes
+                # if 9820h is written, waveform channel 2 is set in 9820h - 983fh, 32 bytes
+                # if 9840h is written, waveform channel 3 is set in 9840h - 985fh, 32 bytes
+                # if 9860h is written, waveform channel 4,5 is set in 9860h - 987fh, 32 bytes
+                # if 9880h is written, frequency channel 1 is set in 9880h - 9881h, 12 bits
+                # if 9882h is written, frequency channel 2 is set in 9882h - 9883h, 12 bits
+                # if 9884h is written, frequency channel 3 is set in 9884h - 9885h, 12 bits
+                # if 9886h is written, frequency channel 4 is set in 9886h - 9887h, 12 bits
+                # if 9888h is written, frequency channel 5 is set in 9888h - 9889h, 12 bits
+                # if 988ah is written, volume channel 1 is set, 4 bits
+                # if 988bh is written, volume channel 2 is set, 4 bits
+                # if 988ch is written, volume channel 3 is set, 4 bits
+                # if 988dh is written, volume channel 4 is set, 4 bits
+                # if 988eh is written, volume channel 5 is set, 4 bits
+                # if 988fh is written, channels 1-5 on/off, 1 bit
+	
+		#VGM port format:
+		#0x00 - waveform
+		#0x01 - frequency
+		#0x02 - volume
+		#0x03 - key on/off
+		#0x04 - waveform (0x00 used to do SCC access, 0x04 SCC+)
+		#0x05 - test register
+
+               update_time
+
+		if {$::wp_last_address>=0x9800 && $::wp_last_address<0x9880} { 
+			append music_data [format %c%c%c%c 0xD2 0x0 [expr $::wp_last_address-0x9800] $::wp_last_value]
+		}
+		if {$::wp_last_address>=0x9880 && $::wp_last_address<0x988a} {
+			puts "frequency data"
+			append music_data [format %c%c%c%c 0xD2 0x1 [expr $::wp_last_address-0x9880] $::wp_last_value]
+		}
+		if {$::wp_last_address>=0x988a && $::wp_last_address<0x988f} {
+			puts "volume data!!"
+			append music_data [format %c%c%c%c 0xD2 0x2 [expr $::wp_last_address-0x988a] $::wp_last_value]
+		}
+		if {$::wp_last_address==0x988f} {
+			puts "enable/disable data!!"
+			append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
+		}
+			
+                #puts $::wp_last_value
+       }
+
+
 	proc update_time {} {
 		variable start_time
 		variable ticks
@@ -245,6 +302,7 @@ namespace eval vgm {
 		variable fm_logged
 		variable y8950_logged
 		variable moonsound_logged
+		variable scc_logged
 
 		variable watchpoint_psg_address
 		variable watchpoint_psg_data
@@ -256,6 +314,7 @@ namespace eval vgm {
 		variable watchpoint_opl4_data_1
 		variable watchpoint_opl4_address_2
 		variable watchpoint_opl4_data_2
+		variable watchpoint_scc_data
 
 		variable watchpoint_isr
 
@@ -281,6 +340,10 @@ namespace eval vgm {
 			debug remove_watchpoint $watchpoint_opl4_data_1
 			debug remove_watchpoint $watchpoint_opl4_address_2
 			debug remove_watchpoint $watchpoint_opl4_data_2
+		}
+
+		if {$scc_logged == 1} {
+			debug remove_watchpoint $watchpoint_scc_data
 		}
 
 		if {!$sample_accurate} {
@@ -337,7 +400,17 @@ namespace eval vgm {
 			append header [zeros 4]
 		}
 
-		append header [zeros 136]
+		# append header [zeros 136]
+		append header [zeros 36]
+
+		# SCC clock
+		if {$scc_logged == 1} {
+			append header [little_endian 1789772]
+		} else {
+			append header [zeros 4]
+		}
+
+		append header [zeros 96]
 
 		set file_handle [open $file_name "w"]
 		fconfigure $file_handle -encoding binary -translation binary
