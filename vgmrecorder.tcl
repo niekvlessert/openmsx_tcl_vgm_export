@@ -4,6 +4,7 @@ namespace eval vgm {
 	variable psg_register
 	variable opll_register
 	variable y8950_register
+	variable opl4_register_wave
 	variable opl4_register_1
 	variable opl4_register_2
 
@@ -25,6 +26,8 @@ namespace eval vgm {
 	variable watchpoint_opll_data
 	variable watchpoint_y8950_address
 	variable watchpoint_y8950_data
+	variable watchpoint_opl4_address_wave
+	variable watchpoint_opl4_data_wave
 	variable watchpoint_opl4_address_1
 	variable watchpoint_opl4_data_1
 	variable watchpoint_opl4_address_2
@@ -50,6 +53,7 @@ namespace eval vgm {
 		variable psg_register
 		variable fm_register
 		variable y8950_register
+		variable opl4_register_wave
 		variable opl4_register_1
 		variable opl4_register_2
 
@@ -71,6 +75,8 @@ namespace eval vgm {
 		variable watchpoint_opll_data
 		variable watchpoint_y8950_address
 		variable watchpoint_y8950_data
+		variable watchpoint_opl4_address_wave
+		variable watchpoint_opl4_data_wave
 		variable watchpoint_opl4_address_1
 		variable watchpoint_opl4_data_1
 		variable watchpoint_opl4_address_2
@@ -87,6 +93,7 @@ namespace eval vgm {
 		set psg_register -1
 		set fm_register -1
 		set y8950_register -1
+		set opl4_register_wave -1
 		set opl4_register_1 -1
 		set opl4_register_2 -1
 
@@ -115,15 +122,16 @@ namespace eval vgm {
 			set watchpoint_y8950_data [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 		}
 
-		# I've been told almost all music on MSX using Moonsound uses Moonsound wave, but for that to work some settings have te be done on the second FM unit
-		# So log FM2 as well..
-		# opl4 1 = wave
+		# Nasty thing; for wave to work some bits have to be set through FM2. So that must be logged. This logs all, but just so you know...
+		# opl4 wave = wave
+		# opl4 1 = FM1
 		# opl4 2 = FM2
-		# Maybe log more in the future.. FM1 if needed
 
 		if {$moonsound_logged == 1} {
-			set watchpoint_opl4_address_1 [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_1}]
-			set watchpoint_opl4_data_1 [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_1}]
+			set watchpoint_opl4_address_wave [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
+			set watchpoint_opl4_data_wave [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
+			set watchpoint_opl4_address_1 [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
+			set watchpoint_opl4_data_1 [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data_1}]
 			set watchpoint_opl4_address_2 [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
 			set watchpoint_opl4_data_2 [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data_2}]
 		}
@@ -141,7 +149,8 @@ namespace eval vgm {
 		if {$psg_logged == 1} { puts -nonewline "PSG " }
 		if {$fm_logged == 1} { puts -nonewline "FMPAC " }
 		if {$y8950_logged == 1} { puts -nonewline "Music_Module " }
-		if {$moonsound_logged == 1} { puts -nonewline "Moondsound" }
+		if {$moonsound_logged == 1} { puts -nonewline "Moondsound " }
+		if {$scc_logged == 1} { puts -nonewline "SCC" }
 		puts ""
 	}
 
@@ -187,6 +196,21 @@ namespace eval vgm {
 		}
 	}
 
+	proc write_opl4_address_wave {} {
+		variable opl4_register_wave
+		set opl4_register_wave $::wp_last_value
+	}
+
+	proc write_opl4_data_wave {} {
+		variable opl4_register_wave
+		variable music_data
+		if {$opl4_register_wave >= 0} {
+			update_time
+			# VGM spec: Port 0 = FM1, port 1 = FM2, port 2 = Wave. It's based on the datasheet A1 & A2 use.
+			append music_data [format %c%c%c%c 0xD0 0x2 $opl4_register_wave $::wp_last_value]
+		}
+	}
+	
 	proc write_opl4_address_1 {} {
 		variable opl4_register_1
 		set opl4_register_1 $::wp_last_value
@@ -195,16 +219,13 @@ namespace eval vgm {
 	proc write_opl4_data_1 {} {
 		variable opl4_register_1
 		variable music_data
-		#puts "write data..."
 		if {$opl4_register_1 >= 0} {
 			update_time
-			# Port 0 = FM1, port 1 = FM2, port 2 = Wave
-			append music_data [format %c%c%c%c 0xD0 0x2 $opl4_register_1 $::wp_last_value]
+			append music_data [format %c%c%c%c 0xD0 0x0 $opl4_register_1 $::wp_last_value]
 		}
 	}
 
 	proc write_opl4_address_2 {} {
-		puts $::wp_last_value
 		variable opl4_register_2
 		set opl4_register_2 $::wp_last_value
 	}
@@ -251,15 +272,12 @@ namespace eval vgm {
 			append music_data [format %c%c%c%c 0xD2 0x0 [expr $::wp_last_address-0x9800] $::wp_last_value]
 		}
 		if {$::wp_last_address>=0x9880 && $::wp_last_address<0x988a} {
-			puts "frequency data"
 			append music_data [format %c%c%c%c 0xD2 0x1 [expr $::wp_last_address-0x9880] $::wp_last_value]
 		}
 		if {$::wp_last_address>=0x988a && $::wp_last_address<0x988f} {
-			puts "volume data!!"
 			append music_data [format %c%c%c%c 0xD2 0x2 [expr $::wp_last_address-0x988a] $::wp_last_value]
 		}
 		if {$::wp_last_address==0x988f} {
-			puts "enable/disable data!!"
 			append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
 		}
 			
@@ -310,6 +328,8 @@ namespace eval vgm {
 		variable watchpoint_opll_data
 		variable watchpoint_y8950_address
 		variable watchpoint_y8950_data
+		variable watchpoint_opl4_address_wave
+		variable watchpoint_opl4_data_wave
 		variable watchpoint_opl4_address_1
 		variable watchpoint_opl4_data_1
 		variable watchpoint_opl4_address_2
@@ -336,6 +356,8 @@ namespace eval vgm {
 		}
 
 		if {$moonsound_logged == 1} {
+			debug remove_watchpoint $watchpoint_opl4_address_wave
+			debug remove_watchpoint $watchpoint_opl4_data_wave
 			debug remove_watchpoint $watchpoint_opl4_address_1
 			debug remove_watchpoint $watchpoint_opl4_data_1
 			debug remove_watchpoint $watchpoint_opl4_address_2
