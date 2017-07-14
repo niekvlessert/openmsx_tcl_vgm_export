@@ -1,6 +1,6 @@
 # openmsx_tcl_vgm_export
 
-A TCL script for OpenMSX to export AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278B (OPL4, Moonsound) and Konami SCC music to VGM
+A TCL script for OpenMSX to export AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278B (OPL4, Moonsound) and Konami SCC(+) music to VGM
 
 This script is an expanded version from the script created by Grauw: https://bitbucket.org/grauw/vgmplay-msx/src/tip/tools/vgmrec.tcl?at=default&fileviewer=file-view-default, which was in turn an expansion of the script by Ricbit; https://github.com/ricbit/Oldies/blob/master/2014-11-grabfm/grabfm.tcl
 
@@ -21,4 +21,5 @@ This script is an expanded version from the script created by Grauw: https://bit
 
 # Future updates
 
-- SCC+ support
+- Error handling (file permissions etc.)
+- MIDI??

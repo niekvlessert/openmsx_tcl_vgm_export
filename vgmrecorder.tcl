@@ -17,6 +17,8 @@ namespace eval vgm {
 	variable fm_logged
 	variable y8950_logged
 	variable moonsound_logged
+	variable scc_logged
+	variable scc_plus_used
 
 	variable sample_accurate true
 
@@ -82,6 +84,9 @@ namespace eval vgm {
 		variable watchpoint_opl4_address_2
 		variable watchpoint_opl4_data_2
 		variable watchpoint_scc_data
+		variable watchpoint_scc_plus_data
+
+		variable scc_plus_used
 
 		variable watchpoint_isr
 
@@ -106,6 +111,8 @@ namespace eval vgm {
 		set y8950_logged $y8950logged
 		set moonsound_logged $moonsoundlogged
 		set scc_logged $scclogged
+
+		set scc_plus_used 0
 
 		if {$psg_logged == 1} {
 			set watchpoint_psg_address [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
@@ -138,6 +145,7 @@ namespace eval vgm {
 
 		if {$scc_logged == 1} {
 			set watchpoint_scc_data [debug set_watchpoint write_mem {0x9800 0x988f} {[watch_in_slot 1 0]} {vgm::scc_data}]
+			set watchpoint_scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8Af} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
 		}
 
 		if {!$sample_accurate} {
@@ -282,8 +290,56 @@ namespace eval vgm {
 		}
 			
                 #puts $::wp_last_value
-       }
+	}
 
+	proc scc_plus_data {} {
+		variable music_data
+		variable scc_plus_used
+                
+		# if b800h is written, waveform channel 1 is set in b800h - b81fh, 32 bytes
+                # if b820h is written, waveform channel 2 is set in b820h - b83fh, 32 bytes
+                # if b840h is written, waveform channel 3 is set in b840h - b85fh, 32 bytes
+                # if b860h is written, waveform channel 4 is set in b860h - b87fh, 32 bytes
+                # if b880h is written, waveform channel 5 is set in b880h - b89fh, 32 bytes
+                # if b8a0h is written, frequency channel 1 is set in b8a0h - b8a1h, 12 bits
+                # if b8a2h is written, frequency channel 2 is set in b8a2h - b8a3h, 12 bits
+                # if b8a4h is written, frequency channel 3 is set in b8a4h - b8a5h, 12 bits
+                # if b8a6h is written, frequency channel 4 is set in b8a6h - b8a7h, 12 bits
+                # if b8a8h is written, frequency channel 5 is set in b8a8h - b8a9h, 12 bits
+                # if b8aah is written, volume channel 1 is set, 4 bits
+                # if b8abh is written, volume channel 2 is set, 4 bits
+                # if b8ach is written, volume channel 3 is set, 4 bits
+                # if b8adh is written, volume channel 4 is set, 4 bits
+                # if b8aeh is written, volume channel 5 is set, 4 bits
+                # if b8afh is written, channels 1-5 on/off, 1 bit
+	
+		#VGM port format:
+		#0x00 - waveform
+		#0x01 - frequency
+		#0x02 - volume
+		#0x03 - key on/off
+		#0x04 - waveform (0x00 used to do SCC access, 0x04 SCC+)
+		#0x05 - test register
+
+               update_time
+
+		if {$::wp_last_address>=0xb800 && $::wp_last_address<0xb8a0} { 
+			append music_data [format %c%c%c%c 0xD2 0x4 [expr $::wp_last_address-0xb800] $::wp_last_value]
+		}
+		if {$::wp_last_address>=0xb8a0 && $::wp_last_address<0xb8aa} {
+			append music_data [format %c%c%c%c 0xD2 0x1 [expr $::wp_last_address-0xb8a0] $::wp_last_value]
+		}
+		if {$::wp_last_address>=0xb8aa && $::wp_last_address<0xb8af} {
+			append music_data [format %c%c%c%c 0xD2 0x2 [expr $::wp_last_address-0xb8aa] $::wp_last_value]
+		}
+		if {$::wp_last_address==0xb8af} {
+			append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
+		}
+
+		set scc_plus_used 1
+			
+                #puts $::wp_last_value
+       }
 
 	proc update_time {} {
 		variable start_time
@@ -335,6 +391,8 @@ namespace eval vgm {
 		variable watchpoint_opl4_address_2
 		variable watchpoint_opl4_data_2
 		variable watchpoint_scc_data
+
+		variable scc_plus_used
 
 		variable watchpoint_isr
 
@@ -427,7 +485,12 @@ namespace eval vgm {
 
 		# SCC clock
 		if {$scc_logged == 1} {
-			append header [little_endian 1789772]
+			if {$scc_plus_used == 1} {
+				# enable bit 31 for scc+ support
+				append header [little_endian 2149273421]
+			} else {
+				append header [little_endian 1789772]
+			}
 		} else {
 			append header [zeros 4]
 		}
