@@ -49,7 +49,7 @@ namespace eval vgm {
 		string repeat "\0" $value
 	}
 
-	proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 0} {fmlogged 0} {y8950logged 0} {moonsoundlogged 0} {scclogged 1}} {
+	proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0} {scclogged 0}} {
 		variable active
 
 		variable psg_register
@@ -249,6 +249,8 @@ namespace eval vgm {
 
 	proc scc_data {} {
 		variable music_data
+
+		# Thanks ValleyBell, BiFi
                 
 		# if 9800h is written, waveform channel 1 is set in 9800h - 981fh, 32 bytes
                 # if 9820h is written, waveform channel 2 is set in 9820h - 983fh, 32 bytes
