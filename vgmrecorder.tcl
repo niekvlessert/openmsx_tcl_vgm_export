@@ -12,12 +12,14 @@ namespace eval vgm {
 	variable ticks
 	variable music_data
 	variable file_name
+	variable original_filename
 
-	variable psg_logged
-	variable fm_logged
-	variable y8950_logged
-	variable moonsound_logged
-	variable scc_logged
+	variable psg_logged 1
+	variable fm_logged 1
+	variable y8950_logged 0
+	variable moonsound_logged 0
+	variable scc_logged 0 
+
 	variable scc_plus_used
 
 	variable sample_accurate true
@@ -38,6 +40,12 @@ namespace eval vgm {
 
 	variable watchpoint_isr
 
+	#Disable this when integrating in OpenMSX source code...
+	bind N+META vgm_rec_next
+	
+	variable vgm_next_filename_digits 
+	set vgm_next_filename_digits 0
+
 	proc little_endian {value} {
 		format %c%c%c%c [expr $value & 0xFF] \
 		                [expr ($value >> 8) & 0xFF] \
@@ -49,7 +57,7 @@ namespace eval vgm {
 		string repeat "\0" $value
 	}
 
-	proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0} {scclogged 0}} {
+	proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0} {scclogged 0} {fromnext 0}} {
 		variable active
 
 		variable psg_register
@@ -88,10 +96,18 @@ namespace eval vgm {
 
 		variable scc_plus_used
 
+		variable vgm_next_filename_digits
+		variable original_filename
+
 		variable watchpoint_isr
 
 		if {$active} {
 			error "Already recording."
+		}
+
+		if {$fromnext==0} {
+			set vgm_next_filename_digits 0
+			set original_filename $filename
 		}
 
 		set active true
@@ -152,14 +168,15 @@ namespace eval vgm {
 			set watchpoint_isr [debug set_watchpoint read_mem 0x38 {} {vgm::update_frametime}]
 		}
 
-		puts "Recording started to $filename."
-		puts -nonewline "Recording data for the following sound chips: "
-		if {$psg_logged == 1} { puts -nonewline "PSG " }
-		if {$fm_logged == 1} { puts -nonewline "FMPAC " }
-		if {$y8950_logged == 1} { puts -nonewline "Music_Module " }
-		if {$moonsound_logged == 1} { puts -nonewline "Moondsound " }
-		if {$scc_logged == 1} { puts -nonewline "SCC" }
-		puts ""
+		variable recording_text
+		set recording_text "VGM recording started to $filename. Recording data for the following sound chips: "
+		if {$psg_logged == 1} { set recording_text [concat $recording_text "PSG "] }
+		if {$fm_logged == 1} { set recording_text [concat $recording_text "FMPAC "] }
+		if {$y8950_logged == 1} { set recording_text [concat $recording_text "Music Module "] }
+		if {$moonsound_logged == 1} { set recording_text [concat $recording_text "Moondsound "] }
+		if {$scc_logged == 1} { set recording_text [concat $recording_text "SCC"] }
+		puts $recording_text
+		message $recording_text
 	}
 
 	proc write_psg_address {} {
@@ -507,10 +524,40 @@ namespace eval vgm {
 
 		set active false
 
-		puts "Recording stopped"
+		variable stop_message
+		set stop_message "VGM recording stopped, writing data and header information to $file_name."
+		puts $stop_message
+		message $stop_message
+	}
+
+	proc vgm_rec_next {} {
+		variable file_name
+		variable new_file_name
+		variable vgm_next_filename_digits
+		variable original_filename
+		variable extension ".vgm"
+
+		variable psg_logged
+		variable fm_logged
+		variable y8950_logged
+		variable moonsound_logged
+		variable scc_logged
+
+		variable active
+		#set active 1
+
+                if {!$active} {
+			vgm_rec
+		} else {
+			incr vgm_next_filename_digits
+			set new_file_name [concat [string range $original_filename 0 [string last ".vgm" $original_filename]-1]_$vgm_next_filename_digits$extension]
+			vgm_rec_end
+			vgm_rec $new_file_name $psg_logged $fm_logged $y8950_logged $moonsound_logged $scc_logged 1
+		}
 	}
 
 	namespace export vgm_rec
+	namespace export vgm_rec_next
 	namespace export vgm_rec_end
 }
 
