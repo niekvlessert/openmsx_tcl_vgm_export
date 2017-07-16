@@ -19,6 +19,8 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Be careful; start the recording before the initialisation of the sound chips, this info needs to be logged as well!
 - This just creates the raw VGM file, you need to split/compress/add tags/etc.
 
+# vgm_rec_next
+
 - There's also a vgm_rec_next function available. This will end the previous recording and start the next one with the same sound chip parameters and filename, but the filename contains an increasing digit
 - With this you can easily multiple songs in seperate files so you don't have to split them afterward
 - This function is available on Mac by pressing cmd-N, you'd have to bind it yourself on other platforms
