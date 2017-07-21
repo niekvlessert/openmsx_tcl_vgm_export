@@ -156,7 +156,8 @@ namespace eval vgm {
 			set watchpoint_opl4_address_1 [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
 			set watchpoint_opl4_data_1 [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data_1}]
 			set watchpoint_opl4_address_2 [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
-			set watchpoint_opl4_data_2 [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data_2}]
+			#should be C7 or C5, it's a mirror register, programmers might have used the original register or the mirror, needs fixing, thanks Yamaha..
+			set watchpoint_opl4_data_2 [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data_2}]
 		}
 
 		if {$scc_logged == 1} {
