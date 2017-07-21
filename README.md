@@ -25,7 +25,7 @@ This script is an expanded version from the script created by Grauw: https://bit
 - With this you can easily multiple songs in seperate files so you don't have to split them afterward
 - This function is available on Mac by pressing cmd-N, you'd have to bind it yourself on other platforms
 - Be careful; this function won't work always; the second and beyond file won't contain any soundchip initialisation stuff
-- For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it won't because of this. This can be fixed as well, but that'll require a lot more work, better use the vgm_tools for splitting those.
+- For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
 
 # Future updates
 
