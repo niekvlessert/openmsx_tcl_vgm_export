@@ -33,14 +33,16 @@ variable watchpoint_y8950_data
 variable watchpoint_opl4_address_wave
 variable watchpoint_opl4_data_wave
 variable watchpoint_opl4_address_1
-variable watchpoint_opl4_data_1
+variable watchpoint_opl4_data
 variable watchpoint_opl4_address_2
-variable watchpoint_opl4_data_2
+variable watchpoint_opl4_data_mirror
 variable watchpoint_scc_data
 
 variable watchpoint_isr
 
-#Disable this when integrating in OpenMSX source code...
+variable active_fm_register -1
+
+#Disabled for integration in OpenMSX...
 #bind N+META vgm_rec_next
 
 variable vgm_next_filename_digits 
@@ -63,7 +65,7 @@ Supported soundchips: AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278
 Optional parameters: vgm_rec [filename] [AY8910 0/1] [YM2413 0/1] [Y8950 0/1] [YMF278B 0/1] [SCC 0/1]
 Defaults: It'll record to /tmp/music.vgm with AY8910 and FM2413 enabled.
 You must end any recording with vgm_rec_end, otherwise the file will be empty.
-Look at vgm_rec_next too.
+Look at vgm_rec_next and vgm_rec_end too.
 Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
 }
 
@@ -98,9 +100,9 @@ proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logge
 	variable watchpoint_opl4_address_wave
 	variable watchpoint_opl4_data_wave
 	variable watchpoint_opl4_address_1
-	variable watchpoint_opl4_data_1
+	variable watchpoint_opl4_data
 	variable watchpoint_opl4_address_2
-	variable watchpoint_opl4_data_2
+	variable watchpoint_opl4_data_mirror
 	variable watchpoint_scc_data
 	variable watchpoint_scc_plus_data
 
@@ -155,19 +157,18 @@ proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logge
 		set watchpoint_y8950_data [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 	}
 
-	# Nasty thing; for wave to work some bits have to be set through FM2. So that must be logged. This logs all, but just so you know...
-	# opl4 wave = wave
-	# opl4 1 = FM1
-	# opl4 2 = FM2
+	# A thing; for wave to work some bits have to be set through FM2. So that must be logged. This logs all, but just so you know...
+	# Another thing; FM data can be used by FM bank 1 and FM bank 2. FM data has a mirror however
+	# So programs can use both ports in different ways; all to FM data, FM1->FM-data,FM2->FM-data-mirror, etc. 4 options.
+	# http://www.msxarchive.nl/pub/msx/docs/programming/opl4tech.txt
 
 	if {$moonsound_logged == 1} {
 		set watchpoint_opl4_address_wave [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
 		set watchpoint_opl4_data_wave [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
 		set watchpoint_opl4_address_1 [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
-		set watchpoint_opl4_data_1 [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data_1}]
+		set watchpoint_opl4_data [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
 		set watchpoint_opl4_address_2 [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
-		#should be C7 or C5, C7 is a mirror register, programmers might have used the original register or the mirror, needs fixing, thanks Yamaha..
-		set watchpoint_opl4_data_2 [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data_2}]
+		set watchpoint_opl4_data_mirror [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data_mirror}]
 	}
 
 	if {$scc_logged == 1} {
@@ -233,11 +234,15 @@ proc write_y8950_data {} {
 }
 
 proc write_opl4_address_wave {} {
+	#puts -nonewline "Register to Wave:"
+	#puts $::wp_last_value
 	variable opl4_register_wave
 	set opl4_register_wave $::wp_last_value
 }
 
 proc write_opl4_data_wave {} {
+	#puts -nonewline "Data to Wave:"
+	#puts $::wp_last_value
 	variable opl4_register_wave
 	variable music_data
 	if {$opl4_register_wave >= 0} {
@@ -248,28 +253,53 @@ proc write_opl4_data_wave {} {
 }
 
 proc write_opl4_address_1 {} {
+	#puts -nonewline "Register to FM 1:"
+	#puts $::wp_last_value
 	variable opl4_register_1
+	variable active_fm_register
 	set opl4_register_1 $::wp_last_value
+	set active_fm_register 1
 }
 
-proc write_opl4_data_1 {} {
+proc write_opl4_data {} {
+	#puts -nonewline "Data to FM data:"
+	#puts $::wp_last_value
 	variable opl4_register_1
+	variable opl4_register_2
+	variable active_fm_register
 	variable music_data
-	if {$opl4_register_1 >= 0} {
+	
+	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
 		update_time
 		append music_data [format %c%c%c%c 0xD0 0x0 $opl4_register_1 $::wp_last_value]
+	}
+	if {($opl4_register_2 >= 0 && $active_fm_register == 2)} {
+		update_time
+		append music_data [format %c%c%c%c 0xD0 0x1 $opl4_register_2 $::wp_last_value]
 	}
 }
 
 proc write_opl4_address_2 {} {
+	#puts -nonewline "Register to FM 2:"
+	#puts $::wp_last_value
 	variable opl4_register_2
+	variable active_fm_register
 	set opl4_register_2 $::wp_last_value
+	set active_fm_register 2
 }
 
-proc write_opl4_data_2 {} {
+proc write_opl4_data_mirror {} {
+	#puts -nonewline "Data to FM data mirror"
+	#puts $::wp_last_value
+	variable opl4_register_1
 	variable opl4_register_2
+	variable active_fm_register
 	variable music_data
-	if {$opl4_register_2 >= 0} {
+	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
+		update_time
+		append music_data [format %c%c%c%c 0xD0 0x0 $opl4_register_1 $::wp_last_value]
+	}
+	if {($opl4_register_2 >= 0 && $active_fm_register == 2)} {
 		update_time
 		append music_data [format %c%c%c%c 0xD0 0x1 $opl4_register_2 $::wp_last_value]
 	}
@@ -421,9 +451,9 @@ proc vgm_rec_end {} {
 	variable watchpoint_opl4_address_wave
 	variable watchpoint_opl4_data_wave
 	variable watchpoint_opl4_address_1
-	variable watchpoint_opl4_data_1
+	variable watchpoint_opl4_data
 	variable watchpoint_opl4_address_2
-	variable watchpoint_opl4_data_2
+	variable watchpoint_opl4_data_mirror
 	variable watchpoint_scc_data
 
 	variable scc_plus_used
@@ -451,9 +481,9 @@ proc vgm_rec_end {} {
 		debug remove_watchpoint $watchpoint_opl4_address_wave
 		debug remove_watchpoint $watchpoint_opl4_data_wave
 		debug remove_watchpoint $watchpoint_opl4_address_1
-		debug remove_watchpoint $watchpoint_opl4_data_1
+		debug remove_watchpoint $watchpoint_opl4_data
 		debug remove_watchpoint $watchpoint_opl4_address_2
-		debug remove_watchpoint $watchpoint_opl4_data_2
+		debug remove_watchpoint $watchpoint_opl4_data_mirror
 	}
 
 	if {$scc_logged == 1} {
@@ -550,7 +580,7 @@ set_help_text vgm_rec_next \
 With this you can easily put multiple songs in separate files so you don't have to split them afterward.
 Be careful; this function won't work always; the second and beyond file won't contain any soundchip initialisation stuff.
 For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
-It's useful to bind this function to a key, to easily skip to the next file. On Mac for example; 'bind N+META vgm_rec_next'.
+It's useful to bind this function to a key, to easily skip to the next file. On Mac for example; 'bind N+META vgm_rec_next', then cmd-N will skip to the next track.
 }
 proc vgm_rec_next {} {
 	variable file_name
@@ -566,7 +596,6 @@ proc vgm_rec_next {} {
 	variable scc_logged
 
 	variable active
-	#set active 1
 
 	if {!$active} {
 		vgm_rec
