@@ -24,7 +24,7 @@ This script is an expanded version from the script created by Grauw: https://bit
 - There's also a vgm_rec_next function available. This will end the previous recording and start the next one with the same sound chip parameters and filename, but the filename contains an increasing digit
 - With this you can easily put tracks in separate files so you don't have to split them afterward
 - Be careful; this function won't work always; the second and beyond file won't contain any soundchip initialisation stuff
-- For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it won't because of this. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
+- For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
 
 # Future updates
 
