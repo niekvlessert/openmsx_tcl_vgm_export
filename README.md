@@ -11,13 +11,14 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Go to the console
 - Insert the required virtual sound cartridges (SCC must be in exta to make recording work).
 - Load your software/game
-- Start recording the VGM data using vgm_rec [filename] [AY8910 0/1] [YM2413 0/1] [Y8950 0/1] [YMF278B 0/1] [SCC 0/1].
-- Recordings will be stored in the OpenMSX home directory from the active user in a new subdirectory vgm_recordings
-- Some defaults are in place; without any arguments it will record to music.vgm with AY8910 and FM2413 enabled.
-- So if you want to record Moonsound music in test.vgm: vgm_rec test.vgm 0 0 0 1 0.
-- If you want to end the recording just type vgm_rec_end. This is required, without doing that the VGM file header won't be written.
-- Play your file!
+- Start recording the VGM data using vgm_rec.
 - Be careful; start the recording before the initialisation of the sound chips, this info needs to be logged as well!
+- Recordings will be stored in the OpenMSX home directory from the active user in a subdirectory vgm_recordings
+- Some defaults are in place; without any arguments it will record to music0001.vgm with PSG and FMPAC enabled.
+- If music0001.vgm already existed it'll be music0002.vgm etc.
+- Enable different soundchips using tab completion: vgm_rec PSG FMPAC Y8950 Moonsound SCC
+- If you want to end the active recording just type vgm_rec_end. This is required, without doing that the VGM file won't be written.
+- Play your file!
 - This just creates the raw VGM file, you need to split/compress/add tags/etc.
 
 # vgm_rec_next
@@ -26,6 +27,10 @@ This script is an expanded version from the script created by Grauw: https://bit
 - With this you can easily put tracks in separate files so you don't have to split them afterward
 - Be careful; this function won't work always; the second and beyond file won't contain any soundchip initialisation stuff
 - For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
+
+# vgm_rec_set_filename
+
+- With this you can set the first part of the filename. So vgm_rec_set_filename pa3_ will cause the filename to be pa3_0001.vgm. If that existed it'll be pa pa3_0002.vgm etc.
 
 # Future updates
 

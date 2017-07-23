@@ -13,6 +13,10 @@ variable ticks
 variable music_data
 variable file_name
 variable original_filename
+variable directory [file normalize $::env(OPENMSX_USER_DATA)/../vgm_recordings]
+
+set original_filename "music"
+set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
 
 variable psg_logged 1
 variable fm_logged 1
@@ -42,8 +46,6 @@ variable watchpoint_isr
 
 variable active_fm_register -1
 
-variable directory
-
 #Disabled for integration in OpenMSX...
 #bind N+META vgm_rec_next
 
@@ -61,18 +63,74 @@ proc zeros {value} {
 	string repeat "\0" $value
 }
 
+set_tabcompletion_proc vgm_rec [namespace code tab_sounddevices]
+
+proc tab_sounddevices {args} {
+        set result [list FMPAC PSG Moonsound Y8950 SCC]
+        return $result
+}
+
+set_help_text vgm_rec_set_filename \
+{Sets the filename prefix of the vgm file.
+Example: vgm_rec_set_filename pa3_
+This will cause the next recording to be made is pa3_0001.vgm. If pa3_0001.vgm exists it'll be pa_0002.vgm etc.
+}
+
+proc vgm_rec_set_filename {filename} {
+	variable file_name
+	variable original_filename
+	variable directory
+
+	if {[string last ".vgm" $filename] == -1} {
+		set original_filename $filename
+	} else {
+		set original_filename [string trim $filename ".vgm"]
+	}
+	set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+}
+
 set_help_text vgm_rec \
 {Starts recording VGM data. Run this before sound chip initialisation, otherwise it won't work.
 Supported soundchips: AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278B (OPL4, Moonsound) and Konami SCC(+).
-Optional parameters: vgm_rec [filename] [AY8910 0/1] [YM2413 0/1] [Y8950 0/1] [YMF278B 0/1] [SCC 0/1]
-The files will be stored in the OpenMSX home directory from the active user in a new subdirectory vgm_recordings
-Defaults: It'll record to music.vgm with AY8910 and FM2413 enabled.
-You must end any recording with vgm_rec_end, otherwise the file will be empty.
-Look at vgm_rec_next and vgm_rec_end too.
+Files will be stored in the OpenMSX home directory in a subdirectory vgm_recordings
+Optional parameters (use tab completion): vgm_rec PSG FMPAC Y8950 Moonsound SCC
+Defaults: Record to music0001.vgm or music0002.vgm if that exists etc., PSG and FMPAC enabled.
+You must end any recording with vgm_rec_end, otherwise the file will be empty. Look at vgm_rec_next and vgm_rec_set_filename too.
 Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
 }
 
-proc vgm_rec {{filename "music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0} {scclogged 0} {fromnext 0}} {
+proc vgm_rec {args} {
+	variable psg_logged 1
+	variable fm_logged 1
+	variable y8950_logged 0
+	variable moonsound_logged 0
+	variable scc_logged 0
+
+	variable file_name
+	variable original_filename
+	variable directory
+
+        if {[llength $args] == 0} {
+		puts "FM/PSG defaults are being used!!"
+	} else {
+		set psg_logged 0
+		set fm_logged 0
+		foreach a $args {
+			if {$a == "PSG"} {set psg_logged 1}
+			if {$a == "FMPAC"} {set fm_logged 1}
+			if {$a == "Y8950"} {set y8950_logged 1}
+			if {$a == "Moonsound"} {set moonsound_logged 1}
+			if {$a == "SCC"} {set scc_logged 1}
+		}
+        }
+
+        set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+
+	vgm_rec_start
+}
+
+
+proc vgm_rec_start {} {
 	variable active
 
 	variable psg_register
@@ -111,23 +169,13 @@ proc vgm_rec {{filename "music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} 
 
 	variable scc_plus_used
 
-	variable vgm_next_filename_digits
-	variable original_filename
-
 	variable watchpoint_isr
 
 	variable directory
+	file mkdir $directory
 
 	if {$active} {
 		error "Already recording."
-	}
-
-        set directory [file normalize $::env(OPENMSX_USER_DATA)/../vgm_recordings]
-	file mkdir $directory
-
-	if {$fromnext==0} {
-		set vgm_next_filename_digits 0
-		set original_filename $filename
 	}
 
 	set active true
@@ -141,12 +189,6 @@ proc vgm_rec {{filename "music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} 
 	set start_time [machine_info time]
 	set ticks 0
 	set music_data ""
-	set file_name $filename
-	set psg_logged $psglogged
-	set fm_logged $fmlogged
-	set y8950_logged $y8950logged
-	set moonsound_logged $moonsoundlogged
-	set scc_logged $scclogged
 
 	set scc_plus_used 0
 
@@ -176,7 +218,7 @@ proc vgm_rec {{filename "music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} 
 		set watchpoint_opl4_address_1 [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
 		set watchpoint_opl4_data [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
 		set watchpoint_opl4_address_2 [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
-		set watchpoint_opl4_data_mirror [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data_mirror}]
+		set watchpoint_opl4_data_mirror [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
 	}
 
 	if {$scc_logged == 1} {
@@ -189,7 +231,7 @@ proc vgm_rec {{filename "music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} 
 	}
 
 	variable recording_text
-	set recording_text "VGM recording started to $filename. Recording data for the following sound chips: "
+	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips: "
 	if {$psg_logged == 1} { set recording_text [concat $recording_text "PSG "] }
 	if {$fm_logged == 1} { set recording_text [concat $recording_text "FMPAC "] }
 	if {$y8950_logged == 1} { set recording_text [concat $recording_text "Music Module "] }
@@ -284,21 +326,6 @@ proc write_opl4_address_2 {} {
 	variable active_fm_register
 	set opl4_register_2 $::wp_last_value
 	set active_fm_register 2
-}
-
-proc write_opl4_data_mirror {} {
-	variable opl4_register_1
-	variable opl4_register_2
-	variable active_fm_register
-	variable music_data
-	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
-		update_time
-		append music_data [format %c%c%c%c 0xD0 0x0 $opl4_register_1 $::wp_last_value]
-	}
-	if {($opl4_register_2 >= 0 && $active_fm_register == 2)} {
-		update_time
-		append music_data [format %c%c%c%c 0xD0 0x1 $opl4_register_2 $::wp_last_value]
-	}
 }
 
 proc scc_data {} {
@@ -557,7 +584,7 @@ proc vgm_rec_end {} {
 
 	append header [zeros 96]
 
-	set file_handle [open [concat $directory/$file_name] "w"]
+	set file_handle [open [concat $file_name] "w"]
 	fconfigure $file_handle -encoding binary -translation binary
 	puts -nonewline $file_handle $header
 	puts -nonewline $file_handle $music_data
@@ -572,40 +599,32 @@ proc vgm_rec_end {} {
 }
 
 set_help_text vgm_rec_next \
-{This will end the previous recording and start the next one with the same sound chip parameters and filename, but the filename contains an increasing digit
+{This will end the previous recording and start the next one with the same sound chip parameters and filename with an increased number in the filename.
 With this you can easily put multiple songs in separate files so you don't have to split them afterward.
-Be careful; this function won't work always; the second and beyond file won't contain any soundchip initialisation stuff.
+Be careful; this function won't work always; the second and beyond file might not contain any soundchip initialisation stuff.
 For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
 It's useful to bind this function to a key, to easily skip to the next file. On Mac for example; 'bind N+META vgm_rec_next', then cmd-N will skip to the next track.
 }
 proc vgm_rec_next {} {
 	variable file_name
-	variable new_file_name
-	variable vgm_next_filename_digits
 	variable original_filename
-	variable extension ".vgm"
-
-	variable psg_logged
-	variable fm_logged
-	variable y8950_logged
-	variable moonsound_logged
-	variable scc_logged
+	variable directory
 
 	variable active
 
 	if {!$active} {
-		vgm_rec
+		set original_filename music
 	} else {
-		incr vgm_next_filename_digits
-		set new_file_name [concat [string range $original_filename 0 [string last ".vgm" $original_filename]-1]_$vgm_next_filename_digits$extension]
 		vgm_rec_end
-		vgm_rec $new_file_name $psg_logged $fm_logged $y8950_logged $moonsound_logged $scc_logged 1
 	}
+	set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+	vgm_rec_start
 }
 
 namespace export vgm_rec
 namespace export vgm_rec_next
 namespace export vgm_rec_end
+namespace export vgm_rec_set_filename
 }
 
 namespace import vgm::*
