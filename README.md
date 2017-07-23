@@ -12,8 +12,9 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Insert the required virtual sound cartridges (SCC must be in exta to make recording work).
 - Load your software/game
 - Start recording the VGM data using vgm_rec [filename] [AY8910 0/1] [YM2413 0/1] [Y8950 0/1] [YMF278B 0/1] [SCC 0/1].
-- Some defaults are in place; without any arguments it will record to /tmp/music.vgm with AY8910 and FM2413 enabled.
-- So if you want to record Moonsound music in /tmp/test.vgm: vgm_rec /tmp/test.vgm 0 0 0 1 0.
+- Recordings will be stored in the OpenMSX home directory from the active user in a new subdirectory vgm_recordings
+- Some defaults are in place; without any arguments it will record to music.vgm with AY8910 and FM2413 enabled.
+- So if you want to record Moonsound music in test.vgm: vgm_rec test.vgm 0 0 0 1 0.
 - If you want to end the recording just type vgm_rec_end. This is required, without doing that the VGM file header won't be written.
 - Play your file!
 - Be careful; start the recording before the initialisation of the sound chips, this info needs to be logged as well!

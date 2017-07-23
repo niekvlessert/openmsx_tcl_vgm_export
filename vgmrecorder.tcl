@@ -42,6 +42,8 @@ variable watchpoint_isr
 
 variable active_fm_register -1
 
+variable directory
+
 #Disabled for integration in OpenMSX...
 #bind N+META vgm_rec_next
 
@@ -63,13 +65,14 @@ set_help_text vgm_rec \
 {Starts recording VGM data. Run this before sound chip initialisation, otherwise it won't work.
 Supported soundchips: AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278B (OPL4, Moonsound) and Konami SCC(+).
 Optional parameters: vgm_rec [filename] [AY8910 0/1] [YM2413 0/1] [Y8950 0/1] [YMF278B 0/1] [SCC 0/1]
-Defaults: It'll record to /tmp/music.vgm with AY8910 and FM2413 enabled.
+The files will be stored in the OpenMSX home directory from the active user in a new subdirectory vgm_recordings
+Defaults: It'll record to music.vgm with AY8910 and FM2413 enabled.
 You must end any recording with vgm_rec_end, otherwise the file will be empty.
 Look at vgm_rec_next and vgm_rec_end too.
 Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
 }
 
-proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0} {scclogged 0} {fromnext 0}} {
+proc vgm_rec {{filename "music.vgm"} {psglogged 1} {fmlogged 1} {y8950logged 0} {moonsoundlogged 0} {scclogged 0} {fromnext 0}} {
 	variable active
 
 	variable psg_register
@@ -113,9 +116,14 @@ proc vgm_rec {{filename "/tmp/music.vgm"} {psglogged 1} {fmlogged 1} {y8950logge
 
 	variable watchpoint_isr
 
+	variable directory
+
 	if {$active} {
 		error "Already recording."
 	}
+
+        set directory [file normalize $::env(OPENMSX_USER_DATA)/../vgm_recordings]
+	file mkdir $directory
 
 	if {$fromnext==0} {
 		set vgm_next_filename_digits 0
@@ -234,15 +242,11 @@ proc write_y8950_data {} {
 }
 
 proc write_opl4_address_wave {} {
-	#puts -nonewline "Register to Wave:"
-	#puts $::wp_last_value
 	variable opl4_register_wave
 	set opl4_register_wave $::wp_last_value
 }
 
 proc write_opl4_data_wave {} {
-	#puts -nonewline "Data to Wave:"
-	#puts $::wp_last_value
 	variable opl4_register_wave
 	variable music_data
 	if {$opl4_register_wave >= 0} {
@@ -253,8 +257,6 @@ proc write_opl4_data_wave {} {
 }
 
 proc write_opl4_address_1 {} {
-	#puts -nonewline "Register to FM 1:"
-	#puts $::wp_last_value
 	variable opl4_register_1
 	variable active_fm_register
 	set opl4_register_1 $::wp_last_value
@@ -262,8 +264,6 @@ proc write_opl4_address_1 {} {
 }
 
 proc write_opl4_data {} {
-	#puts -nonewline "Data to FM data:"
-	#puts $::wp_last_value
 	variable opl4_register_1
 	variable opl4_register_2
 	variable active_fm_register
@@ -280,8 +280,6 @@ proc write_opl4_data {} {
 }
 
 proc write_opl4_address_2 {} {
-	#puts -nonewline "Register to FM 2:"
-	#puts $::wp_last_value
 	variable opl4_register_2
 	variable active_fm_register
 	set opl4_register_2 $::wp_last_value
@@ -289,8 +287,6 @@ proc write_opl4_address_2 {} {
 }
 
 proc write_opl4_data_mirror {} {
-	#puts -nonewline "Data to FM data mirror"
-	#puts $::wp_last_value
 	variable opl4_register_1
 	variable opl4_register_2
 	variable active_fm_register
@@ -397,8 +393,6 @@ proc scc_plus_data {} {
 	}
 
 	set scc_plus_used 1
-		
-	#puts $::wp_last_value
 }
 
 proc update_time {} {
@@ -459,6 +453,8 @@ proc vgm_rec_end {} {
 	variable scc_plus_used
 
 	variable watchpoint_isr
+
+	variable directory
 
 	if {!$active} {
 		error "Not recording."
@@ -549,19 +545,19 @@ proc vgm_rec_end {} {
 
 	# SCC clock
 	if {$scc_logged == 1} {
+		variable scc_clock 1789773
 		if {$scc_plus_used == 1} {
-			# enable bit 31 for scc+ support
-			append header [little_endian 2149273421]
-		} else {
-			append header [little_endian 1789772]
+			# enable bit 31 for scc+ support, that's how it's done in VGM I've been told. Thanks Grauw.
+			set scc_clock [expr $scc_clock | 1 << 31]
 		}
+		append header [little_endian $scc_clock]
 	} else {
 		append header [zeros 4]
 	}
 
 	append header [zeros 96]
 
-	set file_handle [open $file_name "w"]
+	set file_handle [open [concat $directory/$file_name] "w"]
 	fconfigure $file_handle -encoding binary -translation binary
 	puts -nonewline $file_handle $header
 	puts -nonewline $file_handle $music_data
