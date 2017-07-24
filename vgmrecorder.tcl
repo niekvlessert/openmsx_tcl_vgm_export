@@ -391,6 +391,7 @@ proc update_time {} {
 proc update_frametime {} {
 	variable ticks
 	set new_ticks [expr {$ticks + 735}]
+	set ticks new_ticks
 	variable music_data
 	append music_data [binary format c 0x62]
 }
