@@ -16,7 +16,7 @@ variable original_filename
 variable directory [file normalize $::env(OPENMSX_USER_DATA)/../vgm_recordings]
 
 set original_filename "music"
-set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
 
 variable psg_logged 1
 variable fm_logged 1
@@ -83,7 +83,7 @@ proc vgm_rec_set_filename {filename} {
 	} else {
 		set original_filename [string trim $filename ".vgm"]
 	}
-	set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+	set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
 }
 
 set_help_text vgm_rec \
@@ -121,7 +121,7 @@ proc vgm_rec {args} {
 		}
         }
 
-        set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+        set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
 
 	vgm_rec_start
 }
@@ -581,7 +581,7 @@ proc vgm_rec_end {} {
 
 	append header [zeros 96]
 
-	set file_handle [open [concat $file_name] "w"]
+	set file_handle [open $file_name "w"]
 	fconfigure $file_handle -encoding binary -translation binary
 	puts -nonewline $file_handle $header
 	puts -nonewline $file_handle $music_data
@@ -614,7 +614,7 @@ proc vgm_rec_next {} {
 	} else {
 		vgm_rec_end
 	}
-	set file_name [utils::get_next_numbered_filename $directory [concat $original_filename] ".vgm"]
+	set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
 	vgm_rec_start
 }
 
