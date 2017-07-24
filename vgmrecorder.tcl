@@ -53,10 +53,10 @@ variable vgm_next_filename_digits
 set vgm_next_filename_digits 0
 
 proc little_endian {value} {
-	format %c%c%c%c [expr $value & 0xFF] \
-			[expr ($value >> 8) & 0xFF] \
-			[expr ($value >> 16) & 0xFF] \
-			[expr ($value >> 24) & 0xFF]
+	format %c%c%c%c [expr {($value >>  0) & 0xFF}] \
+			[expr {($value >>  8) & 0xFF}] \
+			[expr {($value >> 16) & 0xFF}] \
+			[expr {($value >> 24) & 0xFF}]
 }
 
 proc zeros {value} {
@@ -360,13 +360,13 @@ proc scc_data {} {
        update_time
 
 	if {$::wp_last_address>=0x9800 && $::wp_last_address<0x9880} {
-		append music_data [format %c%c%c%c 0xD2 0x0 [expr $::wp_last_address-0x9800] $::wp_last_value]
+		append music_data [format %c%c%c%c 0xD2 0x0 [expr {$::wp_last_address - 0x9800}] $::wp_last_value]
 	}
 	if {$::wp_last_address>=0x9880 && $::wp_last_address<0x988a} {
-		append music_data [format %c%c%c%c 0xD2 0x1 [expr $::wp_last_address-0x9880] $::wp_last_value]
+		append music_data [format %c%c%c%c 0xD2 0x1 [expr {$::wp_last_address - 0x9880}] $::wp_last_value]
 	}
 	if {$::wp_last_address>=0x988a && $::wp_last_address<0x988f} {
-		append music_data [format %c%c%c%c 0xD2 0x2 [expr $::wp_last_address-0x988a] $::wp_last_value]
+		append music_data [format %c%c%c%c 0xD2 0x2 [expr {$::wp_last_address - 0x988a}] $::wp_last_value]
 	}
 	if {$::wp_last_address==0x988f} {
 		append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
@@ -407,13 +407,13 @@ proc scc_plus_data {} {
        update_time
 
 	if {$::wp_last_address>=0xb800 && $::wp_last_address<0xb8a0} {
-		append music_data [format %c%c%c%c 0xD2 0x4 [expr $::wp_last_address-0xb800] $::wp_last_value]
+		append music_data [format %c%c%c%c 0xD2 0x4 [expr {$::wp_last_address - 0xb800}] $::wp_last_value]
 	}
 	if {$::wp_last_address>=0xb8a0 && $::wp_last_address<0xb8aa} {
-		append music_data [format %c%c%c%c 0xD2 0x1 [expr $::wp_last_address-0xb8a0] $::wp_last_value]
+		append music_data [format %c%c%c%c 0xD2 0x1 [expr {$::wp_last_address - 0xb8a0}] $::wp_last_value]
 	}
 	if {$::wp_last_address>=0xb8aa && $::wp_last_address<0xb8af} {
-		append music_data [format %c%c%c%c 0xD2 0x2 [expr $::wp_last_address-0xb8aa] $::wp_last_value]
+		append music_data [format %c%c%c%c 0xD2 0x2 [expr {$::wp_last_address - 0xb8aa}] $::wp_last_value]
 	}
 	if {$::wp_last_address==0xb8af} {
 		append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
@@ -430,11 +430,11 @@ proc update_time {} {
 	if {!$sample_accurate} {
 		return
 	}
-	set new_ticks [expr int(([machine_info time] - $start_time) * 44100)]
+	set new_ticks [expr {int(([machine_info time] - $start_time) * 44100)}]
 	while {$new_ticks > $ticks} {
-		set difference [expr $new_ticks - $ticks]
-		set step [expr $difference > 65535 ? 65535 : $difference]
-		append music_data [format %c%c%c 0x61 [expr $step & 0xFF] [expr ($step >> 8) & 0xFF]]
+		set difference [expr {$new_ticks - $ticks}]
+		set step [expr {$difference > 65535 ? 65535 : $difference}]
+		append music_data [format %c%c%c 0x61 [expr {$step & 0xFF}] [expr {($step >> 8) & 0xFF}]]
 		incr ticks $step
 	}
 }
@@ -442,7 +442,7 @@ proc update_time {} {
 proc update_frametime {} {
 	variable ticks
 	variable music_data
-	set new_ticks [expr $ticks + 735]
+	set new_ticks [expr {$ticks + 735}]
 	append music_data [format %c 0x62]
 }
 set_help_text vgm_rec_end \
@@ -522,7 +522,7 @@ proc vgm_rec_end {} {
 
 	set header "Vgm "
 	# file size
-	append header [little_endian [expr [string length $music_data] + 0x100 - 4]]
+	append header [little_endian [expr {[string length $music_data] + 0x100 - 4}]]
 	# VGM version 1.7
 	append header [little_endian 0x170]
 	append header [zeros 4]
@@ -539,7 +539,7 @@ proc vgm_rec_end {} {
 	append header [little_endian $ticks]
 	append header [zeros 24]
 	# Data starts at offset 0x100
-	append header [little_endian [expr 0x100 - 0x34]]
+	append header [little_endian [expr {0x100 - 0x34}]]
 	append header [zeros 32]
 
 	# Y8950 clock
@@ -575,7 +575,7 @@ proc vgm_rec_end {} {
 		variable scc_clock 1789773
 		if {$scc_plus_used == 1} {
 			# enable bit 31 for scc+ support, that's how it's done in VGM I've been told. Thanks Grauw.
-			set scc_clock [expr $scc_clock | 1 << 31]
+			set scc_clock [expr {$scc_clock | 1 << 31}]
 		}
 		append header [little_endian $scc_clock]
 	} else {
