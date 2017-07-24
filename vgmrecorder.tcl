@@ -52,11 +52,8 @@ variable active_fm_register -1
 variable vgm_next_filename_digits
 set vgm_next_filename_digits 0
 
-proc little_endian {value} {
-	format %c%c%c%c [expr {($value >>  0) & 0xFF}] \
-			[expr {($value >>  8) & 0xFF}] \
-			[expr {($value >> 16) & 0xFF}] \
-			[expr {($value >> 24) & 0xFF}]
+proc little_endian_32 {value} {
+	binary format i $value
 }
 
 proc zeros {value} {
@@ -251,7 +248,7 @@ proc write_psg_data {} {
 	variable music_data
 	if {$psg_register >= 0 && $psg_register < 14} {
 		update_time
-		append music_data [format %c%c%c 0xA0 $psg_register $::wp_last_value]
+		append music_data [binary format ccc 0xA0 $psg_register $::wp_last_value]
 	}
 }
 
@@ -265,7 +262,7 @@ proc write_opll_data {} {
 	variable music_data
 	if {$opll_register >= 0} {
 		update_time
-		append music_data [format %c%c%c 0x51 $opll_register $::wp_last_value]
+		append music_data [binary format ccc 0x51 $opll_register $::wp_last_value]
 	}
 }
 
@@ -279,7 +276,7 @@ proc write_y8950_data {} {
 	variable music_data
 	if {$y8950_register >= 0} {
 		update_time
-		append music_data [format %c%c%c 0x5C $y8950_register $::wp_last_value]
+		append music_data [binary format ccc 0x5C $y8950_register $::wp_last_value]
 	}
 }
 
@@ -294,7 +291,7 @@ proc write_opl4_data_wave {} {
 	if {$opl4_register_wave >= 0} {
 		update_time
 		# VGM spec: Port 0 = FM1, port 1 = FM2, port 2 = Wave. It's based on the datasheet A1 & A2 use.
-		append music_data [format %c%c%c%c 0xD0 0x2 $opl4_register_wave $::wp_last_value]
+		append music_data [binary format cccc 0xD0 0x2 $opl4_register_wave $::wp_last_value]
 	}
 }
 
@@ -313,11 +310,11 @@ proc write_opl4_data {} {
 
 	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
 		update_time
-		append music_data [format %c%c%c%c 0xD0 0x0 $opl4_register_1 $::wp_last_value]
+		append music_data [binary format cccc 0xD0 0x0 $opl4_register_1 $::wp_last_value]
 	}
 	if {($opl4_register_2 >= 0 && $active_fm_register == 2)} {
 		update_time
-		append music_data [format %c%c%c%c 0xD0 0x1 $opl4_register_2 $::wp_last_value]
+		append music_data [binary format cccc 0xD0 0x1 $opl4_register_2 $::wp_last_value]
 	}
 }
 
@@ -359,17 +356,17 @@ proc scc_data {} {
 
        update_time
 
-	if {$::wp_last_address>=0x9800 && $::wp_last_address<0x9880} {
-		append music_data [format %c%c%c%c 0xD2 0x0 [expr {$::wp_last_address - 0x9800}] $::wp_last_value]
+	if {0x9800 <= $::wp_last_address && $::wp_last_address < 0x9880} {
+		append music_data [binary format cccc 0xD2 0x0 [expr {$::wp_last_address - 0x9800}] $::wp_last_value]
 	}
-	if {$::wp_last_address>=0x9880 && $::wp_last_address<0x988a} {
-		append music_data [format %c%c%c%c 0xD2 0x1 [expr {$::wp_last_address - 0x9880}] $::wp_last_value]
+	if {0x9880 <= $::wp_last_address && $::wp_last_address < 0x988a} {
+		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0x9880}] $::wp_last_value]
 	}
-	if {$::wp_last_address>=0x988a && $::wp_last_address<0x988f} {
-		append music_data [format %c%c%c%c 0xD2 0x2 [expr {$::wp_last_address - 0x988a}] $::wp_last_value]
+	if {0x988a <= $::wp_last_address && $::wp_last_address < 0x988f} {
+		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0x988a}] $::wp_last_value]
 	}
-	if {$::wp_last_address==0x988f} {
-		append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
+	if {$::wp_last_address == 0x988f} {
+		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
 	#puts $::wp_last_value
@@ -406,17 +403,17 @@ proc scc_plus_data {} {
 
        update_time
 
-	if {$::wp_last_address>=0xb800 && $::wp_last_address<0xb8a0} {
-		append music_data [format %c%c%c%c 0xD2 0x4 [expr {$::wp_last_address - 0xb800}] $::wp_last_value]
+	if {0xb800 <= $::wp_last_address && $::wp_last_address < 0xb8a0} {
+		append music_data [binary format cccc 0xD2 0x4 [expr {$::wp_last_address - 0xb800}] $::wp_last_value]
 	}
-	if {$::wp_last_address>=0xb8a0 && $::wp_last_address<0xb8aa} {
-		append music_data [format %c%c%c%c 0xD2 0x1 [expr {$::wp_last_address - 0xb8a0}] $::wp_last_value]
+	if {0xb8a0 <= $::wp_last_address && $::wp_last_address < 0xb8aa} {
+		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0xb8a0}] $::wp_last_value]
 	}
-	if {$::wp_last_address>=0xb8aa && $::wp_last_address<0xb8af} {
-		append music_data [format %c%c%c%c 0xD2 0x2 [expr {$::wp_last_address - 0xb8aa}] $::wp_last_value]
+	if {0xb8aa <= $::wp_last_address && $::wp_last_address < 0xb8af} {
+		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0xb8aa}] $::wp_last_value]
 	}
-	if {$::wp_last_address==0xb8af} {
-		append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
+	if {$::wp_last_address == 0xb8af} {
+		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
 	set scc_plus_used 1
@@ -434,7 +431,7 @@ proc update_time {} {
 	while {$new_ticks > $ticks} {
 		set difference [expr {$new_ticks - $ticks}]
 		set step [expr {$difference > 65535 ? 65535 : $difference}]
-		append music_data [format %c%c%c 0x61 [expr {$step & 0xFF}] [expr {($step >> 8) & 0xFF}]]
+		append music_data [binary format cs 0x61 $step]
 		incr ticks $step
 	}
 }
@@ -443,7 +440,7 @@ proc update_frametime {} {
 	variable ticks
 	variable music_data
 	set new_ticks [expr {$ticks + 735}]
-	append music_data [format %c 0x62]
+	append music_data [binary format c 0x62]
 }
 set_help_text vgm_rec_end \
 {Ends recording VGM data; writes VGM header and data to disk.
@@ -487,7 +484,7 @@ proc vgm_rec_end {} {
 		error "Not recording."
 	}
 
-	if {$psg_logged == 1 } {
+	if {$psg_logged == 1} {
 		debug remove_watchpoint $watchpoint_psg_address
 		debug remove_watchpoint $watchpoint_psg_data
 	}
@@ -518,33 +515,33 @@ proc vgm_rec_end {} {
 	}
 
 	update_time
-	append music_data [format %c 0x66]
+	append music_data [binary format c 0x66]
 
 	set header "Vgm "
 	# file size
-	append header [little_endian [expr {[string length $music_data] + 0x100 - 4}]]
+	append header [little_endian_32 [expr {[string length $music_data] + 0x100 - 4}]]
 	# VGM version 1.7
-	append header [little_endian 0x170]
+	append header [little_endian_32 0x170]
 	append header [zeros 4]
 
 	# YM2413 clock
 	if {$fm_logged == 1} {
-		append header [little_endian 3579545]
+		append header [little_endian_32 3579545]
 	} else {
 		append header [zeros 4]
 	}
 
 	append header [zeros 4]
 	# Number of ticks
-	append header [little_endian $ticks]
+	append header [little_endian_32 $ticks]
 	append header [zeros 24]
 	# Data starts at offset 0x100
-	append header [little_endian [expr {0x100 - 0x34}]]
+	append header [little_endian_32 [expr {0x100 - 0x34}]]
 	append header [zeros 32]
 
 	# Y8950 clock
 	if {$y8950_logged == 1} {
-		append header [little_endian 3579545]
+		append header [little_endian_32 3579545]
 	} else {
 		append header [zeros 4]
 	}
@@ -553,7 +550,7 @@ proc vgm_rec_end {} {
 
 	# YMF278B clock
 	if {$moonsound_logged == 1} {
-		append header [little_endian 33868800]
+		append header [little_endian_32 33868800]
 	} else {
 		append header [zeros 4]
 	}
@@ -562,7 +559,7 @@ proc vgm_rec_end {} {
 
 	# AY8910 clock
 	if {$psg_logged == 1} {
-		append header [little_endian 1789773]
+		append header [little_endian_32 1789773]
 	} else {
 		append header [zeros 4]
 	}
@@ -577,7 +574,7 @@ proc vgm_rec_end {} {
 			# enable bit 31 for scc+ support, that's how it's done in VGM I've been told. Thanks Grauw.
 			set scc_clock [expr {$scc_clock | 1 << 31}]
 		}
-		append header [little_endian $scc_clock]
+		append header [little_endian_32 $scc_clock]
 	} else {
 		append header [zeros 4]
 	}
