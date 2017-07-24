@@ -46,9 +46,6 @@ variable active_fm_register -1
 #Disabled for integration in OpenMSX...
 #bind N+META vgm_rec_next
 
-variable vgm_next_filename_digits
-set vgm_next_filename_digits 0
-
 proc little_endian_32 {value} {
 	binary format i $value
 }
