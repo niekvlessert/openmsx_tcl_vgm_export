@@ -15,9 +15,6 @@ variable file_name
 variable original_filename
 variable directory [file normalize $::env(OPENMSX_USER_DATA)/../vgm_recordings]
 
-set original_filename "music"
-set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
-
 variable psg_logged 1
 variable fm_logged 1
 variable y8950_logged 0
@@ -85,6 +82,7 @@ proc vgm_rec_set_filename {filename} {
 	}
 	set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
 }
+vgm_rec_set_filename "music"
 
 set_help_text vgm_rec \
 {Starts recording VGM data. Run this before sound chip initialisation, otherwise it won't work.
