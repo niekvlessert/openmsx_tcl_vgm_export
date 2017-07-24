@@ -74,9 +74,7 @@ proc set_next_filename {} {
 }
 
 proc vgm_rec_set_filename {filename} {
-	variable file_name
 	variable original_filename
-	variable directory
 
 	if {[string last ".vgm" $filename] == -1} {
 		set original_filename $filename
@@ -99,21 +97,17 @@ Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/b
 }
 
 proc vgm_rec {args} {
-	variable psg_logged 1
-	variable fm_logged 1
+	variable psg_logged 0
+	variable fm_logged 0
 	variable y8950_logged 0
 	variable moonsound_logged 0
 	variable scc_logged 0
 
-	variable file_name
-	variable original_filename
-	variable directory
-
         if {[llength $args] == 0} {
 		puts "FM/PSG defaults are being used!!"
+		set psg_logged 1
+		set fm_logged 1
 	} else {
-		set psg_logged 0
-		set fm_logged 0
 		foreach a $args {
 			if {$a == "PSG"} {set psg_logged 1}
 			if {$a == "FMPAC"} {set fm_logged 1}
@@ -128,108 +122,73 @@ proc vgm_rec {args} {
 
 
 proc vgm_rec_start {} {
-	set_next_filename
-
 	variable active
-
-	variable psg_register
-	variable fm_register
-	variable y8950_register
-	variable opl4_register_wave
-	variable opl4_register_1
-	variable opl4_register_2
-
-	variable start_time
-	variable ticks
-	variable music_data
-	variable file_name
-	variable sample_accurate
-
-	variable psg_logged
-	variable fm_logged
-	variable y8950_logged
-	variable moonsound_logged
-	variable scc_logged
-
-	variable watchpoint_psg_address
-	variable watchpoint_psg_data
-	variable watchpoint_opll_address
-	variable watchpoint_opll_data
-	variable watchpoint_y8950_address
-	variable watchpoint_y8950_data
-	variable watchpoint_opl4_address_wave
-	variable watchpoint_opl4_data_wave
-	variable watchpoint_opl4_address_1
-	variable watchpoint_opl4_data
-	variable watchpoint_opl4_address_2
-	variable watchpoint_opl4_data_mirror
-	variable watchpoint_scc_data
-	variable watchpoint_scc_plus_data
-
-	variable scc_plus_used
-
-	variable watchpoint_isr
-
-	variable directory
-	file mkdir $directory
-
 	if {$active} {
 		error "Already recording."
 	}
-
 	set active true
-	set psg_register -1
-	set fm_register -1
-	set y8950_register -1
-	set opl4_register_wave -1
-	set opl4_register_1 -1
-	set opl4_register_2 -1
 
-	set start_time [machine_info time]
-	set ticks 0
-	set music_data ""
+	set_next_filename
+	variable directory
+	file mkdir $directory
 
-	set scc_plus_used 0
+	variable psg_register -1
+	variable fm_register -1
+	variable y8950_register -1
+	variable opl4_register_wave -1
+	variable opl4_register_1 -1
+	variable opl4_register_2 -1
 
+	variable start_time [machine_info time]
+	variable ticks 0
+	variable music_data ""
+
+	variable scc_plus_used 0
+
+	variable psg_logged
 	if {$psg_logged == 1} {
-		set watchpoint_psg_address [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
-		set watchpoint_psg_data [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
+		variable watchpoint_psg_address [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
+		variable watchpoint_psg_data    [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
 	}
 
+	variable fm_logged
 	if {$fm_logged == 1} {
-		set watchpoint_opll_address [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}]
-		set watchpoint_opll_data [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
+		variable watchpoint_opll_address [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}]
+		variable watchpoint_opll_data    [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
 	}
 
+	variable y8950_logged
 	if {$y8950_logged == 1} {
-		set watchpoint_y8950_address [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
-		set watchpoint_y8950_data [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
+		variable watchpoint_y8950_address [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
+		variable watchpoint_y8950_data    [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 	}
 
 	# A thing; for wave to work some bits have to be set through FM2. So that must be logged. This logs all, but just so you know...
 	# Another thing; FM data can be used by FM bank 1 and FM bank 2. FM data has a mirror however
 	# So programs can use both ports in different ways; all to FM data, FM1->FM-data,FM2->FM-data-mirror, etc. 4 options.
 	# http://www.msxarchive.nl/pub/msx/docs/programming/opl4tech.txt
-
+	variable moonsound_logged
 	if {$moonsound_logged == 1} {
-		set watchpoint_opl4_address_wave [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
-		set watchpoint_opl4_data_wave [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
-		set watchpoint_opl4_address_1 [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
-		set watchpoint_opl4_data [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
-		set watchpoint_opl4_address_2 [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
-		set watchpoint_opl4_data_mirror [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
+		variable watchpoint_opl4_address_wave [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
+		variable watchpoint_opl4_data_wave    [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
+		variable watchpoint_opl4_address_1    [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
+		variable watchpoint_opl4_data         [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
+		variable watchpoint_opl4_address_2    [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
+		variable watchpoint_opl4_data_mirror  [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
 	}
 
+	variable scc_logged
 	if {$scc_logged == 1} {
-		set watchpoint_scc_data [debug set_watchpoint write_mem {0x9800 0x988f} {[watch_in_slot 1 0]} {vgm::scc_data}]
-		set watchpoint_scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8Af} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
+		variable watchpoint_scc_data      [debug set_watchpoint write_mem {0x9800 0x988f} {[watch_in_slot 1 0]} {vgm::scc_data}]
+		variable watchpoint_scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8Af} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
 	}
 
+	variable sample_accurate
 	if {!$sample_accurate} {
-		set watchpoint_isr [debug set_watchpoint read_mem 0x38 {} {vgm::update_frametime}]
+		variable watchpoint_isr [debug set_watchpoint read_mem 0x38 {} {vgm::update_frametime}]
 	}
 
-	variable recording_text
+	variable file_name
 	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
 	if {$psg_logged       == 1} { append recording_text " PSG"          }
 	if {$fm_logged        == 1} { append recording_text " FMPAC"        }
@@ -241,67 +200,61 @@ proc vgm_rec_start {} {
 }
 
 proc write_psg_address {} {
-	variable psg_register
-	set psg_register $::wp_last_value
+	variable psg_register $::wp_last_value
 }
 
 proc write_psg_data {} {
 	variable psg_register
-	variable music_data
 	if {$psg_register >= 0 && $psg_register < 14} {
 		update_time
+		variable music_data
 		append music_data [binary format ccc 0xA0 $psg_register $::wp_last_value]
 	}
 }
 
 proc write_opll_address {} {
-	variable opll_register
-	set opll_register $::wp_last_value
+	variable opll_register $::wp_last_value
 }
 
 proc write_opll_data {} {
 	variable opll_register
-	variable music_data
 	if {$opll_register >= 0} {
 		update_time
+		variable music_data
 		append music_data [binary format ccc 0x51 $opll_register $::wp_last_value]
 	}
 }
 
 proc write_y8950_address {} {
-	variable y8950_register
-	set y8950_register $::wp_last_value
+	variable y8950_register $::wp_last_value
 }
 
 proc write_y8950_data {} {
 	variable y8950_register
-	variable music_data
 	if {$y8950_register >= 0} {
 		update_time
+		variable music_data
 		append music_data [binary format ccc 0x5C $y8950_register $::wp_last_value]
 	}
 }
 
 proc write_opl4_address_wave {} {
-	variable opl4_register_wave
-	set opl4_register_wave $::wp_last_value
+	variable opl4_register_wave $::wp_last_value
 }
 
 proc write_opl4_data_wave {} {
 	variable opl4_register_wave
-	variable music_data
 	if {$opl4_register_wave >= 0} {
 		update_time
 		# VGM spec: Port 0 = FM1, port 1 = FM2, port 2 = Wave. It's based on the datasheet A1 & A2 use.
+		variable music_data
 		append music_data [binary format cccc 0xD0 0x2 $opl4_register_wave $::wp_last_value]
 	}
 }
 
 proc write_opl4_address_1 {} {
-	variable opl4_register_1
-	variable active_fm_register
-	set opl4_register_1 $::wp_last_value
-	set active_fm_register 1
+	variable opl4_register_1 $::wp_last_value
+	variable active_fm_register 1
 }
 
 proc write_opl4_data {} {
@@ -321,20 +274,16 @@ proc write_opl4_data {} {
 }
 
 proc write_opl4_address_2 {} {
-	variable opl4_register_2
-	variable active_fm_register
-	set opl4_register_2 $::wp_last_value
-	set active_fm_register 2
+	variable opl4_register_2 $::wp_last_value
+	variable active_fm_register 2
 }
 
 proc scc_data {} {
-	variable music_data
-
 	# Thanks ValleyBell, BiFi
 
-	# if 9800h is written, waveform channel 1 is set in 9800h - 981fh, 32 bytes
-	# if 9820h is written, waveform channel 2 is set in 9820h - 983fh, 32 bytes
-	# if 9840h is written, waveform channel 3 is set in 9840h - 985fh, 32 bytes
+	# if 9800h is written, waveform channel 1   is set in 9800h - 981fh, 32 bytes
+	# if 9820h is written, waveform channel 2   is set in 9820h - 983fh, 32 bytes
+	# if 9840h is written, waveform channel 3   is set in 9840h - 985fh, 32 bytes
 	# if 9860h is written, waveform channel 4,5 is set in 9860h - 987fh, 32 bytes
 	# if 9880h is written, frequency channel 1 is set in 9880h - 9881h, 12 bits
 	# if 9882h is written, frequency channel 2 is set in 9882h - 9883h, 12 bits
@@ -356,8 +305,9 @@ proc scc_data {} {
 	#0x04 - waveform (0x00 used to do SCC access, 0x04 SCC+)
 	#0x05 - test register
 
-       update_time
+	update_time
 
+	variable music_data
 	if {0x9800 <= $::wp_last_address && $::wp_last_address < 0x9880} {
 		append music_data [binary format cccc 0xD2 0x0 [expr {$::wp_last_address - 0x9800}] $::wp_last_value]
 	}
@@ -375,9 +325,6 @@ proc scc_data {} {
 }
 
 proc scc_plus_data {} {
-	variable music_data
-	variable scc_plus_used
-
 	# if b800h is written, waveform channel 1 is set in b800h - b81fh, 32 bytes
 	# if b820h is written, waveform channel 2 is set in b820h - b83fh, 32 bytes
 	# if b840h is written, waveform channel 3 is set in b840h - b85fh, 32 bytes
@@ -403,8 +350,9 @@ proc scc_plus_data {} {
 	#0x04 - waveform (0x00 used to do SCC access, 0x04 SCC+)
 	#0x05 - test register
 
-       update_time
+	update_time
 
+	variable music_data
 	if {0xb800 <= $::wp_last_address && $::wp_last_address < 0xb8a0} {
 		append music_data [binary format cccc 0xD2 0x4 [expr {$::wp_last_address - 0xb800}] $::wp_last_value]
 	}
@@ -418,32 +366,35 @@ proc scc_plus_data {} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
-	set scc_plus_used 1
+	variable scc_plus_used 1
 }
 
 proc update_time {} {
-	variable start_time
-	variable ticks
-	variable music_data
 	variable sample_accurate
 	if {!$sample_accurate} {
 		return
 	}
+
+	variable start_time
 	set new_ticks [expr {int(([machine_info time] - $start_time) * 44100)}]
+
+	variable ticks
+	variable music_data
 	while {$new_ticks > $ticks} {
 		set difference [expr {$new_ticks - $ticks}]
 		set step [expr {$difference > 65535 ? 65535 : $difference}]
-		append music_data [binary format cs 0x61 $step]
 		incr ticks $step
+		append music_data [binary format cs 0x61 $step]
 	}
 }
 
 proc update_frametime {} {
 	variable ticks
-	variable music_data
 	set new_ticks [expr {$ticks + 735}]
+	variable music_data
 	append music_data [binary format c 0x62]
 }
+
 set_help_text vgm_rec_end \
 {Ends recording VGM data; writes VGM header and data to disk.
 Look at vgm_rec and vgm_rec_next too.
@@ -451,55 +402,42 @@ Look at vgm_rec and vgm_rec_next too.
 
 proc vgm_rec_end {} {
 	variable active
-	variable ticks
-	variable music_data
-	variable file_name
-	variable sample_accurate
-
-	variable psg_logged
-	variable fm_logged
-	variable y8950_logged
-	variable moonsound_logged
-	variable scc_logged
-
-	variable watchpoint_psg_address
-	variable watchpoint_psg_data
-	variable watchpoint_opll_address
-	variable watchpoint_opll_data
-	variable watchpoint_y8950_address
-	variable watchpoint_y8950_data
-	variable watchpoint_opl4_address_wave
-	variable watchpoint_opl4_data_wave
-	variable watchpoint_opl4_address_1
-	variable watchpoint_opl4_data
-	variable watchpoint_opl4_address_2
-	variable watchpoint_opl4_data_mirror
-	variable watchpoint_scc_data
-
-	variable scc_plus_used
-
-	variable watchpoint_isr
-
-	variable directory
-
 	if {!$active} {
 		error "Not recording."
 	}
 
+	variable psg_logged
 	if {$psg_logged == 1} {
+		variable watchpoint_psg_address
+		variable watchpoint_psg_data
 		debug remove_watchpoint $watchpoint_psg_address
 		debug remove_watchpoint $watchpoint_psg_data
 	}
+
+	variable fm_logged
 	if {$fm_logged == 1} {
+		variable watchpoint_opll_address
+		variable watchpoint_opll_data
 		debug remove_watchpoint $watchpoint_opll_address
 		debug remove_watchpoint $watchpoint_opll_data
 	}
+
+	variable y8950_logged
 	if {$y8950_logged == 1} {
+		variable watchpoint_y8950_address
+		variable watchpoint_y8950_data
 		debug remove_watchpoint $watchpoint_y8950_address
 		debug remove_watchpoint $watchpoint_y8950_data
 	}
 
+	variable moonsound_logged
 	if {$moonsound_logged == 1} {
+		variable watchpoint_opl4_address_wave
+		variable watchpoint_opl4_data_wave
+		variable watchpoint_opl4_address_1
+		variable watchpoint_opl4_data
+		variable watchpoint_opl4_address_2
+		variable watchpoint_opl4_data_mirror
 		debug remove_watchpoint $watchpoint_opl4_address_wave
 		debug remove_watchpoint $watchpoint_opl4_data_wave
 		debug remove_watchpoint $watchpoint_opl4_address_1
@@ -508,15 +446,20 @@ proc vgm_rec_end {} {
 		debug remove_watchpoint $watchpoint_opl4_data_mirror
 	}
 
+	variable scc_logged
 	if {$scc_logged == 1} {
+		variable watchpoint_scc_data
 		debug remove_watchpoint $watchpoint_scc_data
 	}
 
+	variable sample_accurate
 	if {!$sample_accurate} {
+		variable watchpoint_isr
 		debug remove_watchpoint $watchpoint_isr
 	}
 
 	update_time
+	variable music_data
 	append music_data [binary format c 0x66]
 
 	set header "Vgm "
@@ -535,6 +478,7 @@ proc vgm_rec_end {} {
 
 	append header [zeros 4]
 	# Number of ticks
+	variable ticks
 	append header [little_endian_32 $ticks]
 	append header [zeros 24]
 	# Data starts at offset 0x100
@@ -571,7 +515,8 @@ proc vgm_rec_end {} {
 
 	# SCC clock
 	if {$scc_logged == 1} {
-		variable scc_clock 1789773
+		set scc_clock 1789773
+		variable scc_plus_used
 		if {$scc_plus_used == 1} {
 			# enable bit 31 for scc+ support, that's how it's done in VGM I've been told. Thanks Grauw.
 			set scc_clock [expr {$scc_clock | 1 << 31}]
@@ -583,6 +528,7 @@ proc vgm_rec_end {} {
 
 	append header [zeros 96]
 
+	variable file_name
 	set file_handle [open $file_name "w"]
 	fconfigure $file_handle -encoding binary -translation binary
 	puts -nonewline $file_handle $header
@@ -591,7 +537,6 @@ proc vgm_rec_end {} {
 
 	set active false
 
-	variable stop_message
 	set stop_message "VGM recording stopped, writing data and header information to $file_name."
 	puts $stop_message
 	message $stop_message
@@ -605,14 +550,9 @@ For SCC it works fine, because no sound chip initialisation is required, but for
 It's useful to bind this function to a key, to easily skip to the next file. On Mac for example; 'bind N+META vgm_rec_next', then cmd-N will skip to the next track.
 }
 proc vgm_rec_next {} {
-	variable file_name
-	variable original_filename
-	variable directory
-
 	variable active
-
 	if {!$active} {
-		set original_filename music
+		variable original_filename music
 	} else {
 		vgm_rec_end
 	}
