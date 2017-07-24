@@ -22,7 +22,7 @@ variable psg_logged 1
 variable fm_logged 1
 variable y8950_logged 0
 variable moonsound_logged 0
-variable scc_logged 0 
+variable scc_logged 0
 
 variable scc_plus_used
 
@@ -49,7 +49,7 @@ variable active_fm_register -1
 #Disabled for integration in OpenMSX...
 #bind N+META vgm_rec_next
 
-variable vgm_next_filename_digits 
+variable vgm_next_filename_digits
 set vgm_next_filename_digits 0
 
 proc little_endian {value} {
@@ -310,7 +310,7 @@ proc write_opl4_data {} {
 	variable opl4_register_2
 	variable active_fm_register
 	variable music_data
-	
+
 	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
 		update_time
 		append music_data [format %c%c%c%c 0xD0 0x0 $opl4_register_1 $::wp_last_value]
@@ -332,7 +332,7 @@ proc scc_data {} {
 	variable music_data
 
 	# Thanks ValleyBell, BiFi
-	
+
 	# if 9800h is written, waveform channel 1 is set in 9800h - 981fh, 32 bytes
 	# if 9820h is written, waveform channel 2 is set in 9820h - 983fh, 32 bytes
 	# if 9840h is written, waveform channel 3 is set in 9840h - 985fh, 32 bytes
@@ -359,7 +359,7 @@ proc scc_data {} {
 
        update_time
 
-	if {$::wp_last_address>=0x9800 && $::wp_last_address<0x9880} { 
+	if {$::wp_last_address>=0x9800 && $::wp_last_address<0x9880} {
 		append music_data [format %c%c%c%c 0xD2 0x0 [expr $::wp_last_address-0x9800] $::wp_last_value]
 	}
 	if {$::wp_last_address>=0x9880 && $::wp_last_address<0x988a} {
@@ -371,14 +371,14 @@ proc scc_data {} {
 	if {$::wp_last_address==0x988f} {
 		append music_data [format %c%c%c%c 0xD2 0x3 0x0 $::wp_last_value]
 	}
-		
+
 	#puts $::wp_last_value
 }
 
 proc scc_plus_data {} {
 	variable music_data
 	variable scc_plus_used
-	
+
 	# if b800h is written, waveform channel 1 is set in b800h - b81fh, 32 bytes
 	# if b820h is written, waveform channel 2 is set in b820h - b83fh, 32 bytes
 	# if b840h is written, waveform channel 3 is set in b840h - b85fh, 32 bytes
@@ -406,7 +406,7 @@ proc scc_plus_data {} {
 
        update_time
 
-	if {$::wp_last_address>=0xb800 && $::wp_last_address<0xb8a0} { 
+	if {$::wp_last_address>=0xb800 && $::wp_last_address<0xb8a0} {
 		append music_data [format %c%c%c%c 0xD2 0x4 [expr $::wp_last_address-0xb800] $::wp_last_value]
 	}
 	if {$::wp_last_address>=0xb8a0 && $::wp_last_address<0xb8aa} {
