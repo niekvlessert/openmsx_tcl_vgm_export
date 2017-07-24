@@ -228,12 +228,12 @@ proc vgm_rec_start {} {
 	}
 
 	variable recording_text
-	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips: "
-	if {$psg_logged == 1} { set recording_text [concat $recording_text "PSG "] }
-	if {$fm_logged == 1} { set recording_text [concat $recording_text "FMPAC "] }
-	if {$y8950_logged == 1} { set recording_text [concat $recording_text "Music Module "] }
-	if {$moonsound_logged == 1} { set recording_text [concat $recording_text "Moondsound "] }
-	if {$scc_logged == 1} { set recording_text [concat $recording_text "SCC"] }
+	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
+	if {$psg_logged       == 1} { append recording_text " PSG"          }
+	if {$fm_logged        == 1} { append recording_text " FMPAC"        }
+	if {$y8950_logged     == 1} { append recording_text " Music Module" }
+	if {$moonsound_logged == 1} { append recording_text " Moondsound"   }
+	if {$scc_logged       == 1} { append recording_text " SCC"          }
 	puts $recording_text
 	message $recording_text
 }
