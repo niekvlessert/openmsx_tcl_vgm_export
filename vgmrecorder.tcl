@@ -70,6 +70,12 @@ Example: vgm_rec_set_filename pa3_
 This will cause the next recording to be made is pa3_0001.vgm. If pa3_0001.vgm exists it'll be pa_0002.vgm etc.
 }
 
+proc set_next_filename {} {
+	variable original_filename
+	variable directory
+	variable file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
+}
+
 proc vgm_rec_set_filename {filename} {
 	variable file_name
 	variable original_filename
@@ -80,8 +86,9 @@ proc vgm_rec_set_filename {filename} {
 	} else {
 		set original_filename [string trim $filename ".vgm"]
 	}
-	set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
+	set_next_filename
 }
+
 vgm_rec_set_filename "music"
 
 set_help_text vgm_rec \
@@ -119,13 +126,13 @@ proc vgm_rec {args} {
 		}
         }
 
-        set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
-
 	vgm_rec_start
 }
 
 
 proc vgm_rec_start {} {
+	set_next_filename
+
 	variable active
 
 	variable psg_register
@@ -612,7 +619,6 @@ proc vgm_rec_next {} {
 	} else {
 		vgm_rec_end
 	}
-	set file_name [utils::get_next_numbered_filename $directory $original_filename ".vgm"]
 	vgm_rec_start
 }
 
