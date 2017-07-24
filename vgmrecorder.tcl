@@ -146,19 +146,19 @@ proc vgm_rec_start {} {
 	variable scc_plus_used 0
 
 	variable psg_logged
-	if {$psg_logged == 1} {
+	if {$psg_logged} {
 		variable watchpoint_psg_address [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
 		variable watchpoint_psg_data    [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
 	}
 
 	variable fm_logged
-	if {$fm_logged == 1} {
+	if {$fm_logged} {
 		variable watchpoint_opll_address [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}]
 		variable watchpoint_opll_data    [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
 	}
 
 	variable y8950_logged
-	if {$y8950_logged == 1} {
+	if {$y8950_logged} {
 		variable watchpoint_y8950_address [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
 		variable watchpoint_y8950_data    [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 	}
@@ -168,7 +168,7 @@ proc vgm_rec_start {} {
 	# So programs can use both ports in different ways; all to FM data, FM1->FM-data,FM2->FM-data-mirror, etc. 4 options.
 	# http://www.msxarchive.nl/pub/msx/docs/programming/opl4tech.txt
 	variable moonsound_logged
-	if {$moonsound_logged == 1} {
+	if {$moonsound_logged} {
 		variable watchpoint_opl4_address_wave [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
 		variable watchpoint_opl4_data_wave    [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
 		variable watchpoint_opl4_address_1    [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
@@ -178,7 +178,7 @@ proc vgm_rec_start {} {
 	}
 
 	variable scc_logged
-	if {$scc_logged == 1} {
+	if {$scc_logged} {
 		variable watchpoint_scc_data      [debug set_watchpoint write_mem {0x9800 0x988f} {[watch_in_slot 1 0]} {vgm::scc_data}]
 		variable watchpoint_scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8Af} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
 	}
@@ -190,11 +190,11 @@ proc vgm_rec_start {} {
 
 	variable file_name
 	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
-	if {$psg_logged       == 1} { append recording_text " PSG"          }
-	if {$fm_logged        == 1} { append recording_text " FMPAC"        }
-	if {$y8950_logged     == 1} { append recording_text " Music Module" }
-	if {$moonsound_logged == 1} { append recording_text " Moondsound"   }
-	if {$scc_logged       == 1} { append recording_text " SCC"          }
+	if {$psg_logged      } { append recording_text " PSG"          }
+	if {$fm_logged       } { append recording_text " FMPAC"        }
+	if {$y8950_logged    } { append recording_text " Music Module" }
+	if {$moonsound_logged} { append recording_text " Moondsound"   }
+	if {$scc_logged      } { append recording_text " SCC"          }
 	puts $recording_text
 	message $recording_text
 }
@@ -263,7 +263,7 @@ proc write_opl4_data {} {
 	variable active_fm_register
 	variable music_data
 
-	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
+	if {($opl4_register_1 >= 0 && $active_fm_register)} {
 		update_time
 		append music_data [binary format cccc 0xD0 0x0 $opl4_register_1 $::wp_last_value]
 	}
@@ -407,7 +407,7 @@ proc vgm_rec_end {} {
 	}
 
 	variable psg_logged
-	if {$psg_logged == 1} {
+	if {$psg_logged} {
 		variable watchpoint_psg_address
 		variable watchpoint_psg_data
 		debug remove_watchpoint $watchpoint_psg_address
@@ -415,7 +415,7 @@ proc vgm_rec_end {} {
 	}
 
 	variable fm_logged
-	if {$fm_logged == 1} {
+	if {$fm_logged} {
 		variable watchpoint_opll_address
 		variable watchpoint_opll_data
 		debug remove_watchpoint $watchpoint_opll_address
@@ -423,7 +423,7 @@ proc vgm_rec_end {} {
 	}
 
 	variable y8950_logged
-	if {$y8950_logged == 1} {
+	if {$y8950_logged} {
 		variable watchpoint_y8950_address
 		variable watchpoint_y8950_data
 		debug remove_watchpoint $watchpoint_y8950_address
@@ -431,7 +431,7 @@ proc vgm_rec_end {} {
 	}
 
 	variable moonsound_logged
-	if {$moonsound_logged == 1} {
+	if {$moonsound_logged} {
 		variable watchpoint_opl4_address_wave
 		variable watchpoint_opl4_data_wave
 		variable watchpoint_opl4_address_1
@@ -447,7 +447,7 @@ proc vgm_rec_end {} {
 	}
 
 	variable scc_logged
-	if {$scc_logged == 1} {
+	if {$scc_logged} {
 		variable watchpoint_scc_data
 		debug remove_watchpoint $watchpoint_scc_data
 	}
@@ -470,7 +470,7 @@ proc vgm_rec_end {} {
 	append header [zeros 4]
 
 	# YM2413 clock
-	if {$fm_logged == 1} {
+	if {$fm_logged} {
 		append header [little_endian_32 3579545]
 	} else {
 		append header [zeros 4]
@@ -486,7 +486,7 @@ proc vgm_rec_end {} {
 	append header [zeros 32]
 
 	# Y8950 clock
-	if {$y8950_logged == 1} {
+	if {$y8950_logged} {
 		append header [little_endian_32 3579545]
 	} else {
 		append header [zeros 4]
@@ -495,7 +495,7 @@ proc vgm_rec_end {} {
 	append header [zeros 4]
 
 	# YMF278B clock
-	if {$moonsound_logged == 1} {
+	if {$moonsound_logged} {
 		append header [little_endian_32 33868800]
 	} else {
 		append header [zeros 4]
@@ -504,7 +504,7 @@ proc vgm_rec_end {} {
 	append header [zeros 16]
 
 	# AY8910 clock
-	if {$psg_logged == 1} {
+	if {$psg_logged} {
 		append header [little_endian_32 1789773]
 	} else {
 		append header [zeros 4]
@@ -514,10 +514,10 @@ proc vgm_rec_end {} {
 	append header [zeros 36]
 
 	# SCC clock
-	if {$scc_logged == 1} {
+	if {$scc_logged} {
 		set scc_clock 1789773
 		variable scc_plus_used
-		if {$scc_plus_used == 1} {
+		if {$scc_plus_used} {
 			# enable bit 31 for scc+ support, that's how it's done in VGM I've been told. Thanks Grauw.
 			set scc_clock [expr {$scc_clock | 1 << 31}]
 		}
