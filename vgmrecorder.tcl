@@ -179,8 +179,8 @@ proc vgm_rec_start {} {
 
 	variable scc_logged
 	if {$scc_logged} {
-		variable watchpoint_scc_data      [debug set_watchpoint write_mem {0x9800 0x988f} {[watch_in_slot 1 0]} {vgm::scc_data}]
-		variable watchpoint_scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8Af} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
+		variable watchpoint_scc_data      [debug set_watchpoint write_mem {0x9800 0x988F} {[watch_in_slot 1 0]} {vgm::scc_data}]
+		variable watchpoint_scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8AF} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
 	}
 
 	variable sample_accurate
@@ -311,13 +311,13 @@ proc scc_data {} {
 	if {0x9800 <= $::wp_last_address && $::wp_last_address < 0x9880} {
 		append music_data [binary format cccc 0xD2 0x0 [expr {$::wp_last_address - 0x9800}] $::wp_last_value]
 	}
-	if {0x9880 <= $::wp_last_address && $::wp_last_address < 0x988a} {
+	if {0x9880 <= $::wp_last_address && $::wp_last_address < 0x988A} {
 		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0x9880}] $::wp_last_value]
 	}
-	if {0x988a <= $::wp_last_address && $::wp_last_address < 0x988f} {
-		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0x988a}] $::wp_last_value]
+	if {0x988A <= $::wp_last_address && $::wp_last_address < 0x988F} {
+		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0x988A}] $::wp_last_value]
 	}
-	if {$::wp_last_address == 0x988f} {
+	if {$::wp_last_address == 0x988F} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
@@ -353,16 +353,16 @@ proc scc_plus_data {} {
 	update_time
 
 	variable music_data
-	if {0xb800 <= $::wp_last_address && $::wp_last_address < 0xb8a0} {
-		append music_data [binary format cccc 0xD2 0x4 [expr {$::wp_last_address - 0xb800}] $::wp_last_value]
+	if {0xB800 <= $::wp_last_address && $::wp_last_address < 0xB8A0} {
+		append music_data [binary format cccc 0xD2 0x4 [expr {$::wp_last_address - 0xB800}] $::wp_last_value]
 	}
-	if {0xb8a0 <= $::wp_last_address && $::wp_last_address < 0xb8aa} {
-		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0xb8a0}] $::wp_last_value]
+	if {0xB8A0 <= $::wp_last_address && $::wp_last_address < 0xb8aa} {
+		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0xB8A0}] $::wp_last_value]
 	}
-	if {0xb8aa <= $::wp_last_address && $::wp_last_address < 0xb8af} {
-		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0xb8aa}] $::wp_last_value]
+	if {0xB8AA <= $::wp_last_address && $::wp_last_address < 0xB8AF} {
+		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0xB8AA}] $::wp_last_value]
 	}
-	if {$::wp_last_address == 0xb8af} {
+	if {$::wp_last_address == 0xB8AF} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
