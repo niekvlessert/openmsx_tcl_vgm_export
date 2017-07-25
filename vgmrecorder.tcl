@@ -21,6 +21,10 @@ variable y8950_logged 0
 variable moonsound_logged 0
 variable scc_logged 0
 
+variable scc_pp_list
+variable scc_sp_list
+variable scc_plus_list
+
 variable scc_plus_used
 
 variable sample_accurate true
@@ -131,6 +135,10 @@ proc vgm_rec_start {} {
 
 	variable scc_plus_used 0
 
+        variable scc_pp_list 
+        variable scc_sp_list
+	variable scc_plus_list
+
 	variable watchpoints
 	variable psg_logged
 	if {$psg_logged} {
@@ -166,8 +174,14 @@ proc vgm_rec_start {} {
 
 	variable scc_logged
 	if {$scc_logged} {
-		dict set watchpoints scc_data      [debug set_watchpoint write_mem {0x9800 0x988F} {[watch_in_slot 1 0]} {vgm::scc_data}]
-		dict set watchpoints scc_plus_data [debug set_watchpoint write_mem {0xB800 0xB8AF} {[watch_in_slot 1 0]} {vgm::scc_plus_data}]
+		find_all_scc
+		foreach a $scc_pp_list b $scc_sp_list c $scc_plus_list {
+			if { $c } {
+				dict set watchpoints scc_plus_data_${a}_${b} [debug set_watchpoint write_mem {0xB800 0xB8AF} "\[watch_in_slot ${a} ${b}\]" {vgm::scc_plus_data}]
+			} else {
+				dict set watchpoints scc_data_${a}_${b}      [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot ${a} ${b}\]" {vgm::scc_data}]
+			}
+		}
 	}
 
 	variable sample_accurate
@@ -184,6 +198,43 @@ proc vgm_rec_start {} {
 	if {$scc_logged      } { append recording_text " SCC"          }
 	puts $recording_text
 	message $recording_text
+}
+
+proc find_all_scc {} {
+	set pp 0
+	variable previous_device ""
+	variable scc_pp_list ""
+	variable scc_sp_list ""
+	variable scc_plus_list ""
+	while {$pp < 4} {
+		set sp 0
+		while {$sp < 4} {
+			set dump [machine_info slot $pp $sp 2]
+			if {$dump != ""} {
+				set dump [regsub -all {\{} $dump ""]
+				set dump [regsub -all {\}} $dump ""]
+				set rom_info [machine_info device $dump]
+				if { $previous_device == $dump } {
+					set sp 4
+				} else {
+					if {[string match -nocase *scc* [lindex $rom_info 0]]} {
+						lappend scc_pp_list $pp
+						lappend scc_sp_list $sp
+						lappend scc_plus_list 1
+					}
+					set 2ndelement [lindex $rom_info 1]
+					if {[string match -nocase *scc* $2ndelement] || [string match -nocase manbow2 $2ndelement] || [string match -nocase KonamiUltimatCollection $2ndelement]} {
+					lappend scc_pp_list $pp
+						lappend scc_sp_list $sp
+						lappend scc_plus_list 0
+					}
+				}
+				set previous_device $dump
+			}
+			incr sp
+		}
+		incr pp
+	}
 }
 
 proc write_psg_address {} {
@@ -390,6 +441,7 @@ Look at vgm_rec and vgm_rec_next too.
 
 proc vgm_rec_end {} {
 	variable active
+	variable scc_logged
 	if {!$active} {
 		error "Not recording."
 	}
@@ -398,11 +450,17 @@ proc vgm_rec_end {} {
 	foreach {logged watches} {psg_logged       {psg_address psg_data}
 	                          fm_logged        {opll_address opll_data}
 	                          y8950_logged     {y8950_address y8950_data}
-	                          moonsound_logged {opl4_address_wave opl4_data_wave opl4_address_1 opl4_data opl4_address_2 opl4_data_mirror}
-				  scc_logged       {scc_data}} {
+	                          moonsound_logged {opl4_address_wave opl4_data_wave opl4_address_1 opl4_data opl4_address_2 opl4_data_mirror}} {
 		variable $logged
 		if {[set $logged]} {
 			foreach watch $watches {
+				debug remove_watchpoint [dict get $watchpoints $watch]
+			}
+		}
+	}
+	if { $scc_logged==1 } {
+		foreach watch $watchpoints {
+			if {[string match -nocase *scc* $watch]} {
 				debug remove_watchpoint [dict get $watchpoints $watch]
 			}
 		}
