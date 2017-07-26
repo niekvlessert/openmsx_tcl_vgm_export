@@ -21,10 +21,6 @@ variable y8950_logged 0
 variable moonsound_logged 0
 variable scc_logged 0
 
-variable scc_pp_list
-variable scc_sp_list
-variable scc_plus_list
-
 variable scc_plus_used
 
 variable sample_accurate true
@@ -135,10 +131,6 @@ proc vgm_rec_start {} {
 
 	variable scc_plus_used 0
 
-        variable scc_pp_list 
-        variable scc_sp_list
-	variable scc_plus_list
-
 	variable watchpoints
 	variable psg_logged
 	if {$psg_logged} {
@@ -174,12 +166,11 @@ proc vgm_rec_start {} {
 
 	variable scc_logged
 	if {$scc_logged} {
-		find_all_scc
-		foreach a $scc_pp_list b $scc_sp_list c $scc_plus_list {
-			if { $c } {
-				dict set watchpoints scc_plus_data_${a}_${b} [debug set_watchpoint write_mem {0xB800 0xB8AF} "\[watch_in_slot ${a} ${b}\]" {vgm::scc_plus_data}]
+		foreach {ps ss plus} [find_all_scc] {
+			if {$plus} {
+				dict set watchpoints scc_plus_data_${ps}_${ss} [debug set_watchpoint write_mem {0xB800 0xB8AF} "\[watch_in_slot $ps $ss\]" {vgm::scc_plus_data}]
 			} else {
-				dict set watchpoints scc_data_${a}_${b}      [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot ${a} ${b}\]" {vgm::scc_data}]
+				dict set watchpoints scc_data_${ps}_${ss}      [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot $ps $ss\]" {vgm::scc_data}]
 			}
 		}
 	}
@@ -201,40 +192,27 @@ proc vgm_rec_start {} {
 }
 
 proc find_all_scc {} {
-	set pp 0
-	variable previous_device ""
-	variable scc_pp_list ""
-	variable scc_sp_list ""
-	variable scc_plus_list ""
-	while {$pp < 4} {
-		set sp 0
-		while {$sp < 4} {
-			set dump [machine_info slot $pp $sp 2]
-			if {$dump != ""} {
-				set dump [regsub -all {\{} $dump ""]
-				set dump [regsub -all {\}} $dump ""]
-				set rom_info [machine_info device $dump]
-				if { $previous_device == $dump } {
-					set sp 4
-				} else {
-					if {[string match -nocase *scc* [lindex $rom_info 0]]} {
-						lappend scc_pp_list $pp
-						lappend scc_sp_list $sp
-						lappend scc_plus_list 1
-					}
-					set 2ndelement [lindex $rom_info 1]
-					if {[string match -nocase *scc* $2ndelement] || [string match -nocase manbow2 $2ndelement] || [string match -nocase KonamiUltimatCollection $2ndelement]} {
-					lappend scc_pp_list $pp
-						lappend scc_sp_list $sp
-						lappend scc_plus_list 0
-					}
+	set result [list]
+	for {set ps 0} {$ps < 4} {incr ps} {
+		for {set ss 0} {$ss < 4} {incr ss} {
+			set device_list [machine_info slot $ps $ss 2]
+			if {[llength $device_list] != 0} {
+				set device [lindex $device_list 0]
+				set device_info_list [machine_info device $device]
+				lassign $device_info_list device_info device_sub_info
+				if {[string match -nocase *scc* $device_info]} {
+					lappend result $ps $ss 1
 				}
-				set previous_device $dump
+				if {[string match -nocase *scc* $device_sub_info] ||
+				    [string match -nocase manbow2 $device_sub_info] ||
+				    [string match -nocase KonamiUltimatCollection $device_sub_info]} {
+					lappend result $ps $ss 0
+				}
 			}
-			incr sp
+			if {![machine_info issubslotted $ps]} break
 		}
-		incr pp
 	}
+	return $result
 }
 
 proc write_psg_address {} {
