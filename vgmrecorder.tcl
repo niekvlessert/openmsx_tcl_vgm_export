@@ -25,7 +25,7 @@ variable scc_plus_used
 
 variable sample_accurate true
 
-variable watchpoints
+variable watchpoints [list]
 
 variable active_fm_register -1
 
@@ -134,20 +134,20 @@ proc vgm_rec_start {} {
 	variable watchpoints
 	variable psg_logged
 	if {$psg_logged} {
-		dict set watchpoints psg_address [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
-		dict set watchpoints psg_data    [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
+		lappend watchpoints [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
 	}
 
 	variable fm_logged
 	if {$fm_logged} {
-		dict set watchpoints opll_address [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}]
-		dict set watchpoints opll_data    [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}]
+		lappend watchpoints [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
 	}
 
 	variable y8950_logged
 	if {$y8950_logged} {
-		dict set watchpoints y8950_address [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
-		dict set watchpoints y8950_data    [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 	}
 
 	# A thing; for wave to work some bits have to be set through FM2. So that must be logged. This logs all, but just so you know...
@@ -156,28 +156,28 @@ proc vgm_rec_start {} {
 	# http://www.msxarchive.nl/pub/msx/docs/programming/opl4tech.txt
 	variable moonsound_logged
 	if {$moonsound_logged} {
-		dict set watchpoints opl4_address_wave [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
-		dict set watchpoints opl4_data_wave    [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
-		dict set watchpoints opl4_address_1    [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
-		dict set watchpoints opl4_data         [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
-		dict set watchpoints opl4_address_2    [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
-		dict set watchpoints opl4_data_mirror  [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
+		lappend watchpoints [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
 	}
 
 	variable scc_logged
 	if {$scc_logged} {
 		foreach {ps ss plus} [find_all_scc] {
 			if {$plus} {
-				dict set watchpoints scc_plus_data_${ps}_${ss} [debug set_watchpoint write_mem {0xB800 0xB8AF} "\[watch_in_slot $ps $ss\]" {vgm::scc_plus_data}]
+				lappend watchpoints [debug set_watchpoint write_mem {0xB800 0xB8AF} "\[watch_in_slot $ps $ss\]" {vgm::scc_plus_data}]
 			} else {
-				dict set watchpoints scc_data_${ps}_${ss}      [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot $ps $ss\]" {vgm::scc_data}]
+				lappend watchpoints [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot $ps $ss\]" {vgm::scc_data}]
 			}
 		}
 	}
 
 	variable sample_accurate
 	if {!$sample_accurate} {
-		dict set watchpoints isr [debug set_watchpoint read_mem 0x38 {} {vgm::update_frametime}]
+		lappend watchpoints [debug set_watchpoint read_mem 0x38 {} {vgm::update_frametime}]
 	}
 
 	variable file_name
@@ -419,34 +419,14 @@ Look at vgm_rec and vgm_rec_next too.
 
 proc vgm_rec_end {} {
 	variable active
-	variable scc_logged
 	if {!$active} {
 		error "Not recording."
 	}
 
+	# remove all watchpoints that were created
 	variable watchpoints
-	foreach {logged watches} {psg_logged       {psg_address psg_data}
-	                          fm_logged        {opll_address opll_data}
-	                          y8950_logged     {y8950_address y8950_data}
-	                          moonsound_logged {opl4_address_wave opl4_data_wave opl4_address_1 opl4_data opl4_address_2 opl4_data_mirror}} {
-		variable $logged
-		if {[set $logged]} {
-			foreach watch $watches {
-				debug remove_watchpoint [dict get $watchpoints $watch]
-			}
-		}
-	}
-	if { $scc_logged==1 } {
-		foreach watch $watchpoints {
-			if {[string match -nocase *scc* $watch]} {
-				debug remove_watchpoint [dict get $watchpoints $watch]
-			}
-		}
-	}
-
-	variable sample_accurate
-	if {!$sample_accurate} {
-		debug remove_watchpoint [dict get $watchpoints isr]
+	foreach watch $watchpoints {
+		debug remove_watchpoint $watch
 	}
 
 	update_time
@@ -505,6 +485,7 @@ proc vgm_rec_end {} {
 	append header [zeros 36]
 
 	# SCC clock
+	variable scc_logged
 	if {$scc_logged} {
 		set scc_clock 1789773
 		variable scc_plus_used
