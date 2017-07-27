@@ -23,8 +23,6 @@ variable scc_logged 0
 
 variable scc_plus_used
 
-variable sample_accurate true
-
 variable watchpoints [list]
 
 variable active_fm_register -1
@@ -174,11 +172,6 @@ proc vgm_rec_start {} {
 				lappend watchpoints [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot $ps $ss\]" {vgm::scc_data}]
 			}
 		}
-	}
-
-	variable sample_accurate
-	if {!$sample_accurate} {
-		lappend watchpoints [debug set_watchpoint read_mem 0x38 {} {vgm::update_frametime}]
 	}
 
 	variable file_name
@@ -387,11 +380,6 @@ proc scc_plus_data {} {
 }
 
 proc update_time {} {
-	variable sample_accurate
-	if {!$sample_accurate} {
-		return
-	}
-
 	variable start_time
 	set new_ticks [expr {int(([machine_info time] - $start_time) * 44100)}]
 
