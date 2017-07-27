@@ -41,7 +41,7 @@ proc zeros {value} {
 set_tabcompletion_proc vgm_rec [namespace code tab_sounddevices]
 
 proc tab_sounddevices {args} {
-        set result [list MSX-Music PSG Moonsound MSX-Audio SCC]
+        set result [list -prefix MSX-Music PSG Moonsound MSX-Audio SCC]
         return $result
 }
 
@@ -177,8 +177,8 @@ proc vgm_rec_start {} {
 	variable file_name
 	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
 	if {$psg_logged      } { append recording_text " PSG"          }
-	if {$fm_logged       } { append recording_text " MSX-Music"        }
-	if {$y8950_logged    } { append recording_text " MSX-Audio" }
+	if {$fm_logged       } { append recording_text " MSX-Music"    }
+	if {$y8950_logged    } { append recording_text " MSX-Audio"    }
 	if {$moonsound_logged} { append recording_text " Moondsound"   }
 	if {$scc_logged      } { append recording_text " SCC"          }
 	puts $recording_text
