@@ -330,8 +330,6 @@ proc scc_data {} {
 	if {$::wp_last_address == 0x988F} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
-
-	#puts $::wp_last_value
 }
 
 proc scc_plus_data {} {
@@ -476,7 +474,6 @@ proc vgm_rec_end {} {
 		append header [zeros 4]
 	}
 
-	# append header [zeros 136]
 	append header [zeros 36]
 
 	# SCC clock
