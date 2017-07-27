@@ -17,6 +17,8 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Some defaults are in place; without any arguments it will record to music0001.vgm with PSG and MSX-Music enabled.
 - If music0001.vgm already exists it'll be music0002.vgm etc.
 - Enable different soundchips using tab completion: vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC
+- You may specify another filename prefix using -prefix prefix
+- For example if you want to record for Moonsound using pa3_ as a prefix: vgmrec -prefix pa3_ Moonsound
 - If you want to end the active recording just type vgm_rec_end. This is required, without doing that the VGM file won't be written.
 - Play your file!
 - This just creates the raw VGM file, you need to split/compress/add tags/etc.
@@ -27,10 +29,6 @@ This script is an expanded version from the script created by Grauw: https://bit
 - With this you can easily put tracks in separate files so you don't have to split them afterward
 - Be careful; this function won't  always work; the second and beyond file might not contain any soundchip initialisation stuff
 - For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_sptd for splitting those.
-
-# vgm_rec_set_filename
-
-- With this you can set the first part of the filename. So vgm_rec_set_filename pa3_ will cause the filename to be pa3_0001.vgm. If that exists it'll be pa3_0002.vgm etc.
 
 # Future updates
 

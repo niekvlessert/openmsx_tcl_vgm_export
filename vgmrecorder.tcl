@@ -47,12 +47,6 @@ proc tab_sounddevices {args} {
         return $result
 }
 
-set_help_text vgm_rec_set_filename \
-{Sets the filename prefix of the vgm file.
-Example: vgm_rec_set_filename pa3_
-This will cause the next recording to be made is pa3_0001.vgm. If pa3_0001.vgm exists it'll be pa_0002.vgm etc.
-}
-
 proc set_next_filename {} {
 	variable original_filename
 	variable directory
@@ -78,7 +72,8 @@ Supported soundchips: AY8910 (PSG), YM2413 (FMPAC, MSX-Music), Y8950 (Music Modu
 Files will be stored in the OpenMSX home directory in a subdirectory vgm_recordings
 Optional parameters (use tab completion): vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC
 Defaults: Record to music0001.vgm or music0002.vgm if that exists etc., PSG and FMPAC enabled.
-You must end any recording with vgm_rec_end, otherwise the file will be empty. Look at vgm_rec_next and vgm_rec_set_filename too.
+You may specify a -prefix parameter to change the music file name prefix to something else.
+You must end any recording with vgm_rec_end, otherwise the file will be empty. Look at vgm_rec_next too.
 Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
 }
 
@@ -89,8 +84,14 @@ proc vgm_rec {args} {
 	variable moonsound_logged 0
 	variable scc_logged 0
 
+	set prefix_index [lsearch -exact $args "-prefix"]
+	if {$prefix_index >= 0 && $prefix_index < ([llength $args] - 1)} {
+		set prefix [lindex $args [expr {$prefix_index + 1}]]
+		set args [lreplace $args $prefix_index [expr {$prefix_index + 1}]]
+		vgm_rec_set_filename $prefix
+	}
+
         if {[llength $args] == 0} {
-		puts "FM/PSG defaults are being used!!"
 		set psg_logged 1
 		set fm_logged 1
 	} else {
@@ -174,7 +175,6 @@ proc vgm_rec_start {} {
 			}
 		}
 	}
-	puts "scc?? $scc_logged"
 
 	variable sample_accurate
 	if {!$sample_accurate} {
@@ -541,7 +541,6 @@ proc vgm_rec_next {} {
 namespace export vgm_rec
 namespace export vgm_rec_next
 namespace export vgm_rec_end
-namespace export vgm_rec_set_filename
 }
 
 namespace import vgm::*
