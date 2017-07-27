@@ -177,8 +177,8 @@ proc vgm_rec_start {} {
 	variable file_name
 	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
 	if {$psg_logged      } { append recording_text " PSG"          }
-	if {$fm_logged       } { append recording_text " FMPAC"        }
-	if {$y8950_logged    } { append recording_text " Music Module" }
+	if {$fm_logged       } { append recording_text " MSX-Music"        }
+	if {$y8950_logged    } { append recording_text " MSX-Audio" }
 	if {$moonsound_logged} { append recording_text " Moondsound"   }
 	if {$scc_logged      } { append recording_text " SCC"          }
 	puts $recording_text
