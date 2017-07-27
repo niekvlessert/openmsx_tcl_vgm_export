@@ -43,7 +43,7 @@ proc zeros {value} {
 set_tabcompletion_proc vgm_rec [namespace code tab_sounddevices]
 
 proc tab_sounddevices {args} {
-        set result [list FMPAC PSG Moonsound Y8950 SCC]
+        set result [list MSX-Music PSG Moonsound MSX-Audio SCC]
         return $result
 }
 
@@ -74,9 +74,9 @@ vgm_rec_set_filename "music"
 
 set_help_text vgm_rec \
 {Starts recording VGM data. Run this before sound chip initialisation, otherwise it won't work.
-Supported soundchips: AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278B (OPL4, Moonsound) and Konami SCC(+).
+Supported soundchips: AY8910 (PSG), YM2413 (FMPAC, MSX-Music), Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and Konami SCC(+).
 Files will be stored in the OpenMSX home directory in a subdirectory vgm_recordings
-Optional parameters (use tab completion): vgm_rec PSG FMPAC Y8950 Moonsound SCC
+Optional parameters (use tab completion): vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC
 Defaults: Record to music0001.vgm or music0002.vgm if that exists etc., PSG and FMPAC enabled.
 You must end any recording with vgm_rec_end, otherwise the file will be empty. Look at vgm_rec_next and vgm_rec_set_filename too.
 Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
@@ -95,11 +95,11 @@ proc vgm_rec {args} {
 		set fm_logged 1
 	} else {
 		foreach a $args {
-			if {$a == "PSG"} {set psg_logged 1}
-			if {$a == "FMPAC"} {set fm_logged 1}
-			if {$a == "Y8950"} {set y8950_logged 1}
-			if {$a == "Moonsound"} {set moonsound_logged 1}
-			if {$a == "SCC"} {set scc_logged 1}
+			if {[string compare -nocase $a "PSG"] == 0	} {set psg_logged 1	 }
+			if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged 1	 }
+			if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged 1	 }
+			if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged 1}
+			if {[string compare -nocase $a "SCC"] == 0	} {set scc_logged 1	 }
 		}
         }
 
@@ -174,6 +174,7 @@ proc vgm_rec_start {} {
 			}
 		}
 	}
+	puts "scc?? $scc_logged"
 
 	variable sample_accurate
 	if {!$sample_accurate} {
@@ -205,7 +206,7 @@ proc find_all_scc {} {
 				}
 				if {[string match -nocase *scc* $device_sub_info] ||
 				    [string match -nocase manbow2 $device_sub_info] ||
-				    [string match -nocase KonamiUltimatCollection $device_sub_info]} {
+				    [string match -nocase KonamiUltimateCollection $device_sub_info]} {
 					lappend result $ps $ss 0
 				}
 			}
@@ -419,6 +420,12 @@ Look at vgm_rec and vgm_rec_next too.
 
 proc vgm_rec_end {} {
 	variable active
+	variable psg_logged
+	variable fm_logged
+	variable y8950_logged
+	variable moonsound_logged
+	variable scc_logged
+
 	if {!$active} {
 		error "Not recording."
 	}

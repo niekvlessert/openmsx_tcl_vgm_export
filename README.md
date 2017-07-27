@@ -1,6 +1,6 @@
 # openmsx_tcl_vgm_export
 
-A TCL script for OpenMSX to export AY8910 (PSG), YM2413 (FMPAC), Y8950 (Music Module), YMF278B (OPL4, Moonsound) and Konami SCC(+) music to VGM
+A TCL script for OpenMSX to export AY8910 (PSG), YM2413 (FMPAC, MSX-Music), Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and Konami SCC(+) music to VGM
 
 This script is an expanded version from the script created by Grauw: https://bitbucket.org/grauw/vgmplay-msx/src/tip/tools/vgmrec.tcl?at=default&fileviewer=file-view-default, which was in turn an expansion of the script by Ricbit; https://github.com/ricbit/Oldies/blob/master/2014-11-grabfm/grabfm.tcl
 
@@ -14,9 +14,9 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Start recording the VGM data using vgm_rec.
 - Be careful; start the recording before the initialisation of the sound chips, this info needs to be logged as well!
 - Recordings will be stored in the OpenMSX home directory from the active user in a subdirectory vgm_recordings
-- Some defaults are in place; without any arguments it will record to music0001.vgm with PSG and FMPAC enabled.
+- Some defaults are in place; without any arguments it will record to music0001.vgm with PSG and MSX-Music enabled.
 - If music0001.vgm already exists it'll be music0002.vgm etc.
-- Enable different soundchips using tab completion: vgm_rec PSG FMPAC Y8950 Moonsound SCC
+- Enable different soundchips using tab completion: vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC
 - If you want to end the active recording just type vgm_rec_end. This is required, without doing that the VGM file won't be written.
 - Play your file!
 - This just creates the raw VGM file, you need to split/compress/add tags/etc.
