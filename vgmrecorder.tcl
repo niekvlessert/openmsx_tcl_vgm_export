@@ -15,11 +15,11 @@ variable file_name
 variable original_filename
 variable directory [file normalize $::env(OPENMSX_USER_DATA)/../vgm_recordings]
 
-variable psg_logged 1
-variable fm_logged 1
-variable y8950_logged 0
-variable moonsound_logged 0
-variable scc_logged 0
+variable psg_logged       true
+variable fm_logged        true
+variable y8950_logged     false
+variable moonsound_logged false
+variable scc_logged       false
 
 variable scc_plus_used
 
@@ -41,8 +41,7 @@ proc zeros {value} {
 set_tabcompletion_proc vgm_rec [namespace code tab_sounddevices]
 
 proc tab_sounddevices {args} {
-        set result [list -prefix MSX-Music PSG Moonsound MSX-Audio SCC]
-        return $result
+        list -prefix MSX-Music PSG Moonsound MSX-Audio SCC
 }
 
 proc set_next_filename {} {
@@ -76,11 +75,11 @@ Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/b
 }
 
 proc vgm_rec {args} {
-	variable psg_logged 0
-	variable fm_logged 0
-	variable y8950_logged 0
-	variable moonsound_logged 0
-	variable scc_logged 0
+	variable psg_logged       false
+	variable fm_logged        false
+	variable y8950_logged     false
+	variable moonsound_logged false
+	variable scc_logged       false
 
 	set prefix_index [lsearch -exact $args "-prefix"]
 	if {$prefix_index >= 0 && $prefix_index < ([llength $args] - 1)} {
@@ -90,15 +89,15 @@ proc vgm_rec {args} {
 	}
 
         if {[llength $args] == 0} {
-		set psg_logged 1
-		set fm_logged 1
+		set psg_logged true
+		set fm_logged  true
 	} else {
 		foreach a $args {
-			if {[string compare -nocase $a "PSG"] == 0	} {set psg_logged 1	 }
-			if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged 1	 }
-			if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged 1	 }
-			if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged 1}
-			if {[string compare -nocase $a "SCC"] == 0	} {set scc_logged 1	 }
+			if {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true}
+			if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true}
+			if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
+			if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
+			if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
 		}
         }
 
@@ -117,18 +116,18 @@ proc vgm_rec_start {} {
 	variable directory
 	file mkdir $directory
 
-	variable psg_register -1
-	variable fm_register -1
-	variable y8950_register -1
+	variable psg_register       -1
+	variable fm_register        -1
+	variable y8950_register     -1
 	variable opl4_register_wave -1
-	variable opl4_register_1 -1
-	variable opl4_register_2 -1
+	variable opl4_register_1    -1
+	variable opl4_register_2    -1
 
 	variable start_time [machine_info time]
 	variable ticks 0
 	variable music_data ""
 
-	variable scc_plus_used 0
+	variable scc_plus_used false
 
 	variable watchpoints
 	variable psg_logged
@@ -176,11 +175,11 @@ proc vgm_rec_start {} {
 
 	variable file_name
 	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
-	if {$psg_logged      } { append recording_text " PSG"          }
-	if {$fm_logged       } { append recording_text " MSX-Music"    }
-	if {$y8950_logged    } { append recording_text " MSX-Audio"    }
-	if {$moonsound_logged} { append recording_text " Moondsound"   }
-	if {$scc_logged      } { append recording_text " SCC"          }
+	if {$psg_logged      } {append recording_text " PSG"       }
+	if {$fm_logged       } {append recording_text " MSX-Music" }
+	if {$y8950_logged    } {append recording_text " MSX-Audio" }
+	if {$moonsound_logged} {append recording_text " Moondsound"}
+	if {$scc_logged      } {append recording_text " SCC"       }
 	puts $recording_text
 	message $recording_text
 }
@@ -273,7 +272,7 @@ proc write_opl4_data {} {
 	variable active_fm_register
 	variable music_data
 
-	if {($opl4_register_1 >= 0 && $active_fm_register)} {
+	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
 		update_time
 		append music_data [binary format cccc 0xD0 0x0 $opl4_register_1 $::wp_last_value]
 	}
@@ -374,7 +373,7 @@ proc scc_plus_data {} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
-	variable scc_plus_used 1
+	variable scc_plus_used true
 }
 
 proc update_time {} {
@@ -391,14 +390,6 @@ proc update_time {} {
 	}
 }
 
-proc update_frametime {} {
-	variable ticks
-	set new_ticks [expr {$ticks + 735}]
-	set ticks new_ticks
-	variable music_data
-	append music_data [binary format c 0x62]
-}
-
 set_help_text vgm_rec_end \
 {Ends recording VGM data; writes VGM header and data to disk.
 Look at vgm_rec and vgm_rec_next too.
@@ -406,12 +397,6 @@ Look at vgm_rec and vgm_rec_next too.
 
 proc vgm_rec_end {} {
 	variable active
-	variable psg_logged
-	variable fm_logged
-	variable y8950_logged
-	variable moonsound_logged
-	variable scc_logged
-
 	if {!$active} {
 		error "Not recording."
 	}
@@ -434,6 +419,7 @@ proc vgm_rec_end {} {
 	append header [zeros 4]
 
 	# YM2413 clock
+	variable fm_logged
 	if {$fm_logged} {
 		append header [little_endian_32 3579545]
 	} else {
@@ -450,6 +436,7 @@ proc vgm_rec_end {} {
 	append header [zeros 32]
 
 	# Y8950 clock
+	variable y8950_logged
 	if {$y8950_logged} {
 		append header [little_endian_32 3579545]
 	} else {
@@ -459,6 +446,7 @@ proc vgm_rec_end {} {
 	append header [zeros 4]
 
 	# YMF278B clock
+	variable moonsound_logged
 	if {$moonsound_logged} {
 		append header [little_endian_32 33868800]
 	} else {
@@ -468,6 +456,7 @@ proc vgm_rec_end {} {
 	append header [zeros 16]
 
 	# AY8910 clock
+	variable psg_logged
 	if {$psg_logged} {
 		append header [little_endian_32 1789773]
 	} else {
