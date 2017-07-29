@@ -88,22 +88,18 @@ proc vgm_rec {args} {
 		vgm_rec_set_filename $prefix
 	}
 
-        if {[llength $args] == 0} {
+	foreach a $args {
+		if {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true}
+		if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true}
+		if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
+		if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
+		if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
+	}
+
+	if {!$psg_logged & !$fm_logged & !$y8950_logged & !$moonsound_logged & !$scc_logged} {
 		set psg_logged true
 		set fm_logged  true
-	} else {
-		foreach a $args {
-			if {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true}
-			if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true}
-			if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
-			if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
-			if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
-			if {!$psg_logged & !$fm_logged & !$y8950_logged & !$moonsound_logged & !$scc_logged} {
-				set psg_logged true
-				set fm_logged  true
-			}
-		}
-        }
+	}
 
 	vgm_rec_start
 }
@@ -410,6 +406,7 @@ proc vgm_rec_end {} {
 	foreach watch $watchpoints {
 		debug remove_watchpoint $watch
 	}
+	variable watchpoints [list]
 
 	update_time
 	variable music_data
