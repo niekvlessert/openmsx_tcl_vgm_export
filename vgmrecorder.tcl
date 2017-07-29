@@ -98,6 +98,10 @@ proc vgm_rec {args} {
 			if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
 			if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
 			if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
+			if {!$psg_logged & !$fm_logged & !$y8950_logged & !$moonsound_logged & !$scc_logged} {
+				set psg_logged true
+				set fm_logged  true
+			}
 		}
         }
 
