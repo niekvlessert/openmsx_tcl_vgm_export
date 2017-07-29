@@ -9,7 +9,7 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Copy the script in the scripts directory in the openmsx profile directory, where ever that might be. On OSX it's ~/.openMSX/share/scripts.
 - Start OpenMSX, the script will be loaded automagically.
 - Go to the console
-- Insert the required virtual sound cartridges (SCC must be in exta to make recording work).
+- Insert the required virtual sound cartridges.
 - Load your software/game
 - Start recording the VGM data using vgm_rec.
 - Be careful; start the recording before the initialisation of the sound chips, this info needs to be logged as well!
