@@ -27,8 +27,7 @@ variable watchpoints [list]
 
 variable active_fm_register -1
 
-#Disabled for integration in OpenMSX...
-#bind N+META vgm_rec_next
+variable supported_chips [list MSX-Music PSG Moonsound MSX-Audio SCC]
 
 proc little_endian_32 {value} {
 	binary format i $value
@@ -38,10 +37,11 @@ proc zeros {value} {
 	string repeat "\0" $value
 }
 
-set_tabcompletion_proc vgm_rec [namespace code tab_sounddevices]
+set_tabcompletion_proc vgm_rec [namespace code tab_vgmrec]
 
-proc tab_sounddevices {args} {
-        list -prefix MSX-Music PSG Moonsound MSX-Audio SCC
+proc tab_vgmrec {args} {
+	variable supported_chips
+	concat $supported_chips -prefix
 }
 
 proc set_next_filename {} {
@@ -64,15 +64,17 @@ proc vgm_rec_set_filename {filename} {
 vgm_rec_set_filename "music"
 
 set_help_text vgm_rec \
-{Starts recording VGM data. Run this before sound chip initialisation, otherwise it won't work.
-Supported soundchips: AY8910 (PSG), YM2413 (FMPAC, MSX-Music), Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and Konami SCC(+).
-Files will be stored in the OpenMSX home directory in a subdirectory vgm_recordings
-Optional parameters (use tab completion): vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC
-Defaults: Record to music0001.vgm or music0002.vgm if that exists etc., PSG and FMPAC enabled.
+"Starts recording VGM data. Run this before sound chip initialisation,
+otherwise it won't work. Supported soundchips: AY8910 (PSG), YM2413 (FMPAC,
+MSX-Music), Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and
+Konami SCC(+).
+Files will be stored in the openMSX home directory in a subdirectory vgm_recordings
+Optional parameters (use tab completion): vgm_rec [tab_vgmrec]
+Defaults: Record to music0001.vgm or music0002.vgm if that exists etc., PSG and MSX-Music enabled.
 You may specify a -prefix parameter to change the music file name prefix to something else.
 You must end any recording with vgm_rec_end, otherwise the file will be empty. Look at vgm_rec_next too.
 Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
-}
+"
 
 proc vgm_rec {args} {
 	variable psg_logged       false
@@ -89,11 +91,12 @@ proc vgm_rec {args} {
 	}
 
 	foreach a $args {
-		if {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true}
-		if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true}
-		if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
-		if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
-		if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
+		if     {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true} \
+		elseif {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true} \
+		elseif {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true} \
+		elseif {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true} \
+		elseif {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true} \
+		else {error "Unrecognized argument: $a"}
 	}
 
 	if {!$psg_logged & !$fm_logged & !$y8950_logged & !$moonsound_logged & !$scc_logged} {
