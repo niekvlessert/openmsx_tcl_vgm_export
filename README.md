@@ -18,7 +18,7 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Without any arguments it will record to music0001.vgm. If music0001.vgm already exists it'll be music0002.vgm etc.
 - You may specify another filename prefix using ```-prefix prefix```.
 - For example if you want to record for Moonsound using pa3_ as a prefix: ```vgmrec -prefix pa3_ Moonsound```.
-- If you want to end the active recording just type vgm_rec_end. This is required, without doing that the VGM file won't be written.
+- If you want to end the active recording just type ```vgm_rec_end```. This is required, without doing that the VGM file won't be written.
 - Play your file!
 - This just creates the raw VGM file, you need to split/compress/add tags/etc.
 
