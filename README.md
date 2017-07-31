@@ -13,7 +13,7 @@ This script is an expanded version from the script created by Grauw: https://bit
 - Load your software/game.
 - Start recording the VGM data using ```vgm_rec```.
 - Be careful; start the recording before the initialisation of the sound chips, this info needs to be logged as well!
-- You must enable at least one soundchips you want to record for; use tab completion: ```vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC```
+- You must enable at least one soundchip you want to record for; use tab completion: ```vgm_rec PSG MSX-Music MSX-Audio Moonsound SCC```
 - Recordings will be stored in the OpenMSX home directory from the active user in a subdirectory vgm_recordings.
 - Without any arguments it will record to music0001.vgm. If music0001.vgm already exists it'll be music0002.vgm etc.
 - You may specify another filename prefix using ```-prefix prefix```.
