@@ -68,12 +68,16 @@ set_help_text vgm_rec \
 otherwise it won't work. Supported soundchips: AY8910 (PSG), YM2413 (FMPAC,
 MSX-Music), Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and
 Konami SCC(+).
-Files will be stored in the openMSX home directory in a subdirectory vgm_recordings
-Optional parameters (use tab completion): vgm_rec [tab_vgmrec]
-Defaults: Record to music0001.vgm or music0002.vgm if that exists etc., PSG and MSX-Music enabled.
-You may specify a -prefix parameter to change the music file name prefix to something else.
-You must end any recording with vgm_rec_end, otherwise the file will be empty. Look at vgm_rec_next too.
-Additional information: https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
+Files will be stored in the openMSX home directory in a subdirectory vgm_recordings.
+Optional parameters (use tab completion): vgm_rec [tab_vgmrec], you must specify at 
+least one soundchip.
+Default filename: Record to music0001.vgm or music0002.vgm if that exists etc.
+You may specify a -prefix parameter to change the music file name prefix to
+something else.
+You must end any recording with vgm_rec_end, otherwise the file will be empty.
+Look at vgm_rec_next too.
+Additional information:
+https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
 "
 
 proc vgm_rec {args} {
@@ -82,6 +86,7 @@ proc vgm_rec {args} {
 	variable y8950_logged     false
 	variable moonsound_logged false
 	variable scc_logged       false
+	variable supported_chips
 
 	set prefix_index [lsearch -exact $args "-prefix"]
 	if {$prefix_index >= 0 && $prefix_index < ([llength $args] - 1)} {
@@ -91,20 +96,19 @@ proc vgm_rec {args} {
 	}
 
 	foreach a $args {
-		if     {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true} \
-		elseif {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true} \
-		elseif {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true} \
-		elseif {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true} \
-		elseif {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true} \
-		else {error "Unrecognized argument: $a"}
+		if {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true}
+		if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true}
+		if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
+		if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
+		if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
 	}
 
 	if {!$psg_logged & !$fm_logged & !$y8950_logged & !$moonsound_logged & !$scc_logged} {
-		set psg_logged true
-		set fm_logged  true
+		puts "Please specify one or more music chips you want to record VGM data from. Options are:"
+		puts "vgm_rec [-prefix filename_prefix] $supported_chips"
+	} else {
+		vgm_rec_start
 	}
-
-	vgm_rec_start
 }
 
 
@@ -151,9 +155,12 @@ proc vgm_rec_start {} {
 		lappend watchpoints [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 	}
 
-	# A thing; for wave to work some bits have to be set through FM2. So that must be logged. This logs all, but just so you know...
-	# Another thing; FM data can be used by FM bank 1 and FM bank 2. FM data has a mirror however
-	# So programs can use both ports in different ways; all to FM data, FM1->FM-data,FM2->FM-data-mirror, etc. 4 options.
+	# A thing: for wave to work some bits have to be set through FM2. So
+	# that must be logged. This logs all, but just so you know...
+	# Another thing: FM data can be used by FM bank 1 and FM bank 2. FM
+	# data has a mirror however
+	# So programs can use both ports in different ways; all to FM data,
+	# FM1->FM-data,FM2->FM-data-mirror, etc. 4 options.
 	# http://www.msxarchive.nl/pub/msx/docs/programming/opl4tech.txt
 	variable moonsound_logged
 	if {$moonsound_logged} {
@@ -177,7 +184,7 @@ proc vgm_rec_start {} {
 	}
 
 	variable file_name
-	set recording_text "VGM recording started to $file_name. Recording data for the following sound chips:"
+	set recording_text "VGM recording started to $file_name.\nRecording data for the following sound chips:"
 	if {$psg_logged      } {append recording_text " PSG"       }
 	if {$fm_logged       } {append recording_text " MSX-Music" }
 	if {$y8950_logged    } {append recording_text " MSX-Audio" }
@@ -258,7 +265,8 @@ proc write_opl4_data_wave {} {
 	variable opl4_register_wave
 	if {$opl4_register_wave >= 0} {
 		update_time
-		# VGM spec: Port 0 = FM1, port 1 = FM2, port 2 = Wave. It's based on the datasheet A1 & A2 use.
+		# VGM spec: Port 0 = FM1, port 1 = FM2, port 2 = Wave. It's
+		# based on the datasheet A1 & A2 use.
 		variable music_data
 		append music_data [binary format cccc 0xD0 0x2 $opl4_register_wave $::wp_last_value]
 	}
@@ -475,7 +483,8 @@ proc vgm_rec_end {} {
 		set scc_clock 1789773
 		variable scc_plus_used
 		if {$scc_plus_used} {
-			# enable bit 31 for scc+ support, that's how it's done in VGM I've been told. Thanks Grauw.
+			# enable bit 31 for SCC+ support, that's how it's done
+			# in VGM I've been told. Thanks Grauw.
 			set scc_clock [expr {$scc_clock | 1 << 31}]
 		}
 		append header [little_endian_32 $scc_clock]
@@ -494,17 +503,25 @@ proc vgm_rec_end {} {
 
 	set active false
 
-	set stop_message "VGM recording stopped, writing data and header information to $file_name."
+	set stop_message "VGM recording stopped, wrote data to $file_name."
 	puts $stop_message
 	message $stop_message
 }
 
 set_help_text vgm_rec_next \
-{This will end the previous recording and start the next one with the same sound chip parameters and filename with an increased number in the filename.
-With this you can easily put multiple songs in separate files so you don't have to split them afterward.
-Be careful; this function won't work always; the second and beyond file might not contain any soundchip initialisation stuff.
-For SCC it works fine, because no sound chip initialisation is required, but for Moonsound it might not because of this, if the player engine is not doing all initialisation with every track. This can be fixed as well, but that'll require more work, better use the vgm_tools for splitting those.
-It's useful to bind this function to a key, to easily skip to the next file. On Mac for example; 'bind N+META vgm_rec_next', then cmd-N will skip to the next track.
+{This will end the previous recording and start the next one with the same
+sound chip parameters and filename with an increased number in the filename.
+With this you can easily put multiple songs in separate files so you don't have
+to split them afterwards.
+Be careful; this function won't work always; the second and beyond file might
+not contain any soundchip initialisation stuff.
+For SCC it works fine, because no sound chip initialisation is required, but
+for Moonsound it might not because of this, if the player engine is not doing
+all initialisation with every track. This can be fixed as well, but that'll
+require more work, better use the vgm_tools for splitting those.
+It's useful to bind this function to a key, to easily skip to the next file. On
+Mac for example: 'bind N+META vgm_rec_next', then Cmd-N will skip to the next
+track.
 }
 proc vgm_rec_next {} {
 	variable active
