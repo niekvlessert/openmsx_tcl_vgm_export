@@ -68,10 +68,9 @@ set_help_text vgm_rec \
 otherwise it won't work. Supported soundchips: AY8910 (PSG), YM2413 (FMPAC,
 MSX-Music), Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and
 Konami SCC(+).
-Files will be stored in the openMSX home directory in a subdirectory vgm_recordings.
-Optional parameters (use tab completion): vgm_rec [tab_vgmrec], you must specify at 
-least one soundchip.
-Default filename: Record to music0001.vgm or music0002.vgm if that exists etc.
+Files will be stored in the openMSX home directory in a subdirectory vgm_recordings
+Optional parameters (use tab completion): vgm_rec [tab_vgmrec]
+Defaults: Record to music0001.vgm or music0002.vgm if that exists etc.
 You may specify a -prefix parameter to change the music file name prefix to
 something else.
 You must end any recording with vgm_rec_end, otherwise the file will be empty.
@@ -86,7 +85,6 @@ proc vgm_rec {args} {
 	variable y8950_logged     false
 	variable moonsound_logged false
 	variable scc_logged       false
-	variable supported_chips
 
 	set prefix_index [lsearch -exact $args "-prefix"]
 	if {$prefix_index >= 0 && $prefix_index < ([llength $args] - 1)} {
@@ -95,20 +93,21 @@ proc vgm_rec {args} {
 		vgm_rec_set_filename $prefix
 	}
 
-	foreach a $args {
-		if {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true}
-		if {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true}
-		if {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true}
-		if {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true}
-		if {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true}
+	if {[llength $args] == 0} {
+		variable supported_chips
+		error "Please specify one or more music chips you want to record VGM data from:\nvgm_rec \[-prefix filename_prefix\] $supported_chips"
 	}
 
-	if {!$psg_logged & !$fm_logged & !$y8950_logged & !$moonsound_logged & !$scc_logged} {
-		puts "Please specify one or more music chips you want to record VGM data from. Options are:"
-		puts "vgm_rec [-prefix filename_prefix] $supported_chips"
-	} else {
-		vgm_rec_start
+	foreach a $args {
+		if     {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true} \
+		elseif {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true} \
+		elseif {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true} \
+		elseif {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true} \
+		elseif {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true} \
+		else {error "Unrecognized argument: $a"}
 	}
+
+	vgm_rec_start
 }
 
 
@@ -153,6 +152,18 @@ proc vgm_rec_start {} {
 	if {$y8950_logged} {
 		lappend watchpoints [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
 		lappend watchpoints [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
+
+		set y8950_ram [concat [machine_info output_port 0xC0] RAM]
+		if {[lsearch -exact [debug list] $y8950_ram] >= 0} {
+			set y8950_ram_size [debug size $y8950_ram]
+			if {$y8950_ram_size > 0} {
+				append music_data [binary format ccc 0x67 0x66 0x88]
+				append music_data [little_endian_32 [expr $y8950_ram_size + 8]]
+				append music_data [little_endian_32 $y8950_ram_size]
+				append music_data [zeros 4]
+				append music_data [debug read_block $y8950_ram 0 $y8950_ram_size]
+			}
+		}
 	}
 
 	# A thing: for wave to work some bits have to be set through FM2. So
@@ -170,6 +181,18 @@ proc vgm_rec_start {} {
 		lappend watchpoints [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
 		lappend watchpoints [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
 		lappend watchpoints [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
+
+		set moonsound_ram [concat [machine_info output_port 0x7E] {wave RAM}]
+		if {[lsearch -exact [debug list] $moonsound_ram] >= 0} {
+			set moonsound_ram_size [debug size $moonsound_ram]
+			if {$moonsound_ram_size > 0} {
+				append music_data [binary format ccc 0x67 0x66 0x87]
+				append music_data [little_endian_32 [expr $moonsound_ram_size + 8]]
+				append music_data [little_endian_32 $moonsound_ram_size]
+				append music_data [zeros 4]
+				append music_data [debug read_block $moonsound_ram 0 $moonsound_ram_size]
+			}
+		}
 	}
 
 	variable scc_logged
