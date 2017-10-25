@@ -73,7 +73,7 @@ Optional parameters (use tab completion): vgm_rec [tab_vgmrec]
 Defaults: Record to music0001.vgm or music0002.vgm if that exists etc.
 You may specify a -prefix parameter to change the music file name prefix to
 something else.
-You must end any recording with vgm_rec_end, otherwise the file will be empty.
+You must end any recording with vgm_rec_end, otherwise there will be no file.
 Look at vgm_rec_next too.
 Additional information:
 https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
