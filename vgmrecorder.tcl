@@ -438,7 +438,11 @@ proc vgm_rec_end {} {
 	# remove all watchpoints that were created
 	variable watchpoints
 	foreach watch $watchpoints {
-		debug remove_watchpoint $watch
+		if {[catch {
+			debug remove_watchpoint $watch
+		} errorText]} {
+			puts "Failed to remove watchpoint $watch... using savestates maybe? Continue anyway."
+		}
 	}
 	variable watchpoints [list]
 
