@@ -33,3 +33,18 @@ This script is an expanded version from the script created by Grauw: https://bit
 
 - Error handling (file permissions etc.)
 - MIDI??
+
+# Dutch Moonsound Veterans Hack/Version
+
+This is the basic script adapted for ripping Dutch Moonsound Veterans while avoiding manual work as much as possible. It's not perfect at all; it won't work as the normal version however all code is still in and the commands won't work the way the help information will tell you. Be sure to put this version on top of the original version, otherwise it will conflict.
+
+All you have to do is start Dutch Moonsound Veterans and run vgm_rec_auto_next. In the vgm_recordings directory all vgm files will appear. It's advised to use the throttle feature...
+
+Some of the features of this version might get integreated into the normal version.
+
+- Moonsound sample ram will be saved after each recording to the vgm datablock, so vgm files not containing the sample ram data as vgm data (because no sample kit was loaded during recordinging) will work too
+- OPL4 init added to every Moonsound VGM file, so recording can be started when the player has been loaded and the init won’t run anymore
+- Detect playback start/stop, on start start recording for Moonsound, on end end recording and save vgm file
+- Get composer and title from MSX memory, store it in the vgm file, with other related data such as year, etc.
+- Save files as 01, 02, 03, etc
+- Filenames are also based on title
