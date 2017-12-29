@@ -36,7 +36,7 @@ This script is an expanded version from the script created by Grauw: https://bit
 
 # Dutch Moonsound Veterans Hack/Version
 
-This is the basic script adapted for ripping Dutch Moonsound Veterans while avoiding manual work as much as possible. It's not perfect at all; it won't work as the normal version however all code is still in and the commands won't work the way the help information will tell you. Be sure to put this version on top of the original version, otherwise it will conflict.
+This is the basic script adapted for ripping Dutch Moonsound Veterans while avoiding manual work as much as possible. It's not perfect at all; it won't work as the normal version however all code is still in and the commands won't work the way the help information will tell you. OpenMSX needs to run in UX environment and vgm_sptd and vgm_tag need to be in /usr/local/bin. Be sure to put this version on top of the original version, otherwise it will conflict.
 
 All you have to do is start Dutch Moonsound Veterans and run vgm_rec_auto_next. In the vgm_recordings directory all vgm files will appear. It's advised to use the throttle feature...
 
