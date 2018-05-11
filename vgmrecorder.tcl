@@ -96,12 +96,6 @@ https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
 "
 
 proc vgm_rec {args} {
-	variable psg_logged       false
-	variable fm_logged        false
-	variable y8950_logged     false
-	variable moonsound_logged false
-	variable scc_logged       false
-
 	variable abort            false
 	variable auto_next        false
 
@@ -162,6 +156,12 @@ proc vgm_rec {args} {
 		vgm::vgm_rec_end
 		return
 	}
+
+	variable psg_logged       false
+	variable fm_logged        false
+	variable y8950_logged     false
+	variable moonsound_logged false
+	variable scc_logged       false
 
 	set index [lsearch -exact $args "-next"]
 	if {$index >= 0} {
