@@ -208,7 +208,6 @@ proc vgm_rec {args} {
 			} else {
 				if {!$psg_logged && !$fm_logged && !$y8950_logged && !$moonsound_logged && !$scc_logged} { error "Please choose at least one chip to record for, use tab completion" }
 			}
-			puts "psg $psg_logged, fm $fm_logged, y8950 $y8950_logged, moonsound $moonsound_logged, scc $scc_logged"
 			vgm::vgm_rec_start
 			return
 		} else {
@@ -239,7 +238,7 @@ proc vgm_rec_start {} {
 
 	variable auto_next
 	if { $auto_next } {
-			vgm::vgm_check_audio_data_written
+		vgm::vgm_check_audio_data_written
 	}
 
 	variable mbwave_loop_hack
