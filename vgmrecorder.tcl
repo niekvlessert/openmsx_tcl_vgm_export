@@ -179,16 +179,10 @@ proc vgm_rec {args} {
 		return
 	}
 
-	if {[llength $args] == 0} {
-		variable supported_chips
-		error "Please specify one or more music chips you want to record VGM data from:\nvgm_rec $supported_chips"
-	}
-
 	set index [lsearch -exact $args "start"]
 	if {$index >= 0} {
 		if {!$active} {
 			if {$index < ([llength $args] - 1)} {
-				puts "args found... $args"
 				set args [lreplace $args $index [expr {$index}]]
 
 				set psg_logged 		false
@@ -203,10 +197,14 @@ proc vgm_rec {args} {
 					elseif {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true} \
 					elseif {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true} \
 					elseif {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true} \
-					else {error "Please choose a valid chip to record, use tab completion"}
+					else {
+						error "Invalid chip to record for specified, use tab completion"
+						return
+					}
 				}
 			} else {
-				if {!$psg_logged && !$fm_logged && !$y8950_logged && !$moonsound_logged && !$scc_logged} { error "Please choose at least one chip to record for, use tab completion" }
+				error "Please choose at least one chip to record for, use tab completion"
+				return
 			}
 			vgm::vgm_rec_start
 			return
@@ -538,15 +536,11 @@ proc vgm_rec_end {} {
 	variable active
 	variable abort
 
-	if {!$active && $abort} {
-		set stop_message "VGM recording aborted, no data written..."
-		puts $stop_message
+	if {!$active} {
+		set stop_message "Not recording currently..."
+		error $stop_message
 		message $stop_message
 		return
-	}
-
-	if {!$active} {
-		error "Not recording."
 	}
 
 	# remove all watchpoints that were created
