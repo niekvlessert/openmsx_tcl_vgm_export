@@ -44,6 +44,57 @@ variable mbwave_basic_title_hack false
 
 variable supported_chips [list MSX-Music PSG Moonsound MSX-Audio SCC]
 
+set_help_proc vgm_rec [namespace code vgm_rec_help]
+proc vgm_rec_help {args} {
+        switch -- [lindex $args 1] {
+                "start"    {return {VGM recording will be initiliased, specify one or more soundchips to record.
+
+Syntax: vgm_rec start <MSX-Audio|MSX-Music|Moonsound|PSG|SCC>
+
+Actual recording will start when audio is detected to avoid silence at the beginning of the recording. This mechanism will only work if the MSX and/or playback routine does not send data to the soundchip when not playing, recording will start immediatly in those cases.
+}}
+                "stop" {return {Stop recording and save the data to the openMSX user directory in vgm_recordings. By default the filename will be music0001.vgm, when this exists music0002.vgm etc...
+
+Syntax: vgm_rec stop
+}}
+                "abort"  {return {Abort an active recording without saving the data.
+
+Syntax: vgm_rec abort
+}}
+                "next"   {return {Stops current recording and starts recording the next track, remembering the chips to record for.
+
+Syntax: vgm_rec next
+}}
+                "auto_next"   {return {Enables the auto_next recording; if no data is being send to the chip for more then 2 seconds, the next recording will be started.
+
+Syntax: vgm_rec auto_next
+}}
+                "prefix"   {return {Specify the prefix of the VGM files, instead of the default music
+
+Syntax: vgm_rec prefix
+}}
+                "enable_hack"   {return {Enables one of three hacks; MBWave_basic_title, MBWave_title or MBWave_loop
+
+Syntax: vgm_rec enable_hack <MBWave_basic_title|MBWave_title|MBWave_loop>
+
+MBWave_basic_title will change the filename written to the track title detected in  the OpenMSX memory when using the MBWave basic driver. MBWave_title will do the same when using MBWave itself. MBWave_loop will insert a vgm pokey command when the     tracks loops for the second time. This can be useful when it's hard to find the loop point using the vgmlpfnd tool from vgm_tools. When using vgm_cmp this otherwise     useless command will be optimised away.
+}}
+                "disable_hacks"   {return {Disable all hacks
+
+Syntax: vgm_rec disable_hacks
+}}
+                default {return {Record a vgm file from audio playing in openMSX
+
+Syntax: vgm_rec <sub-command> [arguments if needed]
+
+Where sub-command is one of:
+start, stop, abort, next, auto_next, prefix, enable_hack or disable_hacks.
+
+Use 'help vgm_rec <sub-command>' to get more help on specific sub-commands.
+}}
+        }
+}
+
 proc little_endian_32 {value} {
 	binary format i $value
 }
@@ -151,7 +202,7 @@ proc vgm_rec {args} {
 
 	set index [lsearch -exact $args "auto_next"]
 	if {$index >= 0} {
-		set args [lreplace $args $index [expr {$index}]]
+		#set args [lreplace $args $index [expr {$index}]]
 		set auto_next true
 		puts "Enabled auto next feature"
 		return
@@ -159,7 +210,7 @@ proc vgm_rec {args} {
 
 	set index [lsearch -exact $args "abort"]
 	if {$index >= 0} {
-		set args [lreplace $args $index [expr {$index}]]
+		#set args [lreplace $args $index [expr {$index}]]
 		set abort true
 		vgm::vgm_rec_end
 		return
@@ -167,16 +218,21 @@ proc vgm_rec {args} {
 
 	set index [lsearch -exact $args "stop"]
 	if {$index >= 0} {
-		set args [lreplace $args $index [expr {$index}]]
+		#set args [lreplace $args $index [expr {$index}]]
 		vgm::vgm_rec_end
 		return
 	}
 
 	set index [lsearch -exact $args "next"]
 	if {$index >= 0} {
-		set args [lreplace $args $index [expr {$index}]]
-		vgm::vgm_rec_next
-		return
+		if {$active} {
+			#set args [lreplace $args $index [expr {$index}]]
+			vgm::vgm_rec_next
+			return
+		} else {
+			error "Not recording now...";
+			return
+		}
 	}
 
 	set index [lsearch -exact $args "start"]
