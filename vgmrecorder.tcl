@@ -311,6 +311,7 @@ proc vgm_rec_start {} {
 
 	variable ticks 0
 	variable music_data ""
+	variable temp_music_data ""
 
 	variable scc_plus_used false
 
@@ -331,6 +332,19 @@ proc vgm_rec_start {} {
 	if {$y8950_logged} {
 		lappend watchpoints [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
 		lappend watchpoints [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
+
+		# Save the sample RAM as a datablock. If loaded before starting the recording it's fine, if loaded afterward it'll be saved as vgm commands which will be optimised to datablock by the vgmtools
+		set y8950_ram [concat [machine_info output_port 0xC0] RAM]
+		if {[lsearch -exact [debug list] $y8950_ram] >= 0} {
+			set y8950_ram_size [debug size $y8950_ram]
+			if {$y8950_ram_size > 0} {
+				append temp_music_data [binary format ccc 0x67 0x66 0x88]
+				append temp_music_data [little_endian_32 [expr $y8950_ram_size + 8]]
+				append temp_music_data [little_endian_32 $y8950_ram_size]
+				append temp_music_data [zeros 4]
+				append temp_music_data [debug read_block $y8950_ram 0 $y8950_ram_size]
+			}
+		}
 	}
 
 	# A thing: for wave to work some bits have to be set through FM2. So
@@ -348,6 +362,23 @@ proc vgm_rec_start {} {
 		lappend watchpoints [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
 		lappend watchpoints [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
 		lappend watchpoints [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
+
+		# Save the sample RAM as a datablock. If loaded before starting the recording it's fine, if loaded afterward it'll be saved as vgm commands which will be optimised to datablock by the vgmtools
+		set moonsound_ram [concat [machine_info output_port 0x7E] {wave RAM}]
+		if {[lsearch -exact [debug list] $moonsound_ram] >= 0} {
+			set moonsound_ram_size [debug size $moonsound_ram]
+			if {$moonsound_ram_size > 0} {
+				append temp_music_data [binary format ccc 0x67 0x66 0x87]
+				append temp_music_data [little_endian_32 [expr $moonsound_ram_size + 8]]
+				append temp_music_data [little_endian_32 $moonsound_ram_size]
+				append temp_music_data [zeros 4]
+				append temp_music_data [debug read_block $moonsound_ram 0 $moonsound_ram_size]
+
+				# enable OPL4 mode so it's enabled even if recorded vgm data won't do that
+				append temp_music_data [binary format cccc 0xD0 0x01 0x05 0x03]
+			}
+		}
+
 	}
 
 	variable scc_logged
@@ -579,6 +610,11 @@ proc update_time {} {
 	set new_ticks [expr {int(($tick_time - $start_time) * 44100)}]
 
 	variable ticks
+	if {$new_ticks < $ticks} {
+		puts "VGM warning: Tick backstep ($new_ticks -> $ticks)"
+			set ticks [expr {$new_ticks - 65535}]
+	}
+
 	variable music_data
 	while {$new_ticks > $ticks} {
 		set difference [expr {$new_ticks - $ticks}]
@@ -618,40 +654,7 @@ proc vgm_rec_end {} {
 		set tick_time 0
 
 		variable music_data
-		variable temp_music_data ""
-
-		variable moonsound_logged
-		if {$moonsound_logged} {
-			set moonsound_ram [concat [machine_info output_port 0x7E] {wave RAM}]
-			if {[lsearch -exact [debug list] $moonsound_ram] >= 0} {
-				set moonsound_ram_size [debug size $moonsound_ram]
-				if {$moonsound_ram_size > 0} {
-					append temp_music_data [binary format ccc 0x67 0x66 0x87]
-					append temp_music_data [little_endian_32 [expr $moonsound_ram_size + 8]]
-					append temp_music_data [little_endian_32 $moonsound_ram_size]
-					append temp_music_data [zeros 4]
-					append temp_music_data [debug read_block $moonsound_ram 0 $moonsound_ram_size]
-
-					# enable OPL4 mode so it's enabled even if recorded vgm data won't do that
-					append temp_music_data [binary format cccc 0xD0 0x01 0x05 0x03]
-				}
-			}
-		}
-
-		variable y8950_logged
-		if { $y8950_logged } {
-			set y8950_ram [concat [machine_info output_port 0xC0] RAM]
-			if {[lsearch -exact [debug list] $y8950_ram] >= 0} {
-				set y8950_ram_size [debug size $y8950_ram]
-				if {$y8950_ram_size > 0} {
-					append temp_music_data [binary format ccc 0x67 0x66 0x88]
-					append temp_music_data [little_endian_32 [expr $y8950_ram_size + 8]]
-					append temp_music_data [little_endian_32 $y8950_ram_size]
-					append temp_music_data [zeros 4]
-					append temp_music_data [debug read_block $y8950_ram 0 $y8950_ram_size]
-				}
-			}
-		}
+		variable temp_music_data 
 
 		append temp_music_data $music_data
 		append temp_music_data [binary format c 0x66]
@@ -660,7 +663,7 @@ proc vgm_rec_end {} {
 		# file size
 		append header [little_endian_32 [expr {[string length $temp_music_data] + 0x100 - 4}]]
 		# VGM version 1.7
-		append header [little_endian_32 0x170]
+		append header [little_endian_32 0x161]
 		append header [zeros 4]
 
 		# YM2413 clock
@@ -682,6 +685,7 @@ proc vgm_rec_end {} {
 		append header [zeros 32]
 
 		# Y8950 clock
+		variable y8950_logged
 		if {$y8950_logged} {
 			append header [little_endian_32 3579545]
 		} else {
@@ -691,6 +695,7 @@ proc vgm_rec_end {} {
 		append header [zeros 4]
 
 		# YMF278B clock
+		variable moonsound_logged
 		if {$moonsound_logged} {
 			append header [little_endian_32 33868800]
 		} else {
