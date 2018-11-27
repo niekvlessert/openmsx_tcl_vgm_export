@@ -202,7 +202,6 @@ proc vgm_rec {args} {
 
 	set index [lsearch -exact $args "auto_next"]
 	if {$index >= 0} {
-		#set args [lreplace $args $index [expr {$index}]]
 		set auto_next true
 		puts "Enabled auto next feature"
 		return
@@ -210,7 +209,6 @@ proc vgm_rec {args} {
 
 	set index [lsearch -exact $args "abort"]
 	if {$index >= 0} {
-		#set args [lreplace $args $index [expr {$index}]]
 		set abort true
 		vgm::vgm_rec_end
 		return
@@ -218,7 +216,6 @@ proc vgm_rec {args} {
 
 	set index [lsearch -exact $args "stop"]
 	if {$index >= 0} {
-		#set args [lreplace $args $index [expr {$index}]]
 		vgm::vgm_rec_end
 		return
 	}
@@ -226,7 +223,6 @@ proc vgm_rec {args} {
 	set index [lsearch -exact $args "next"]
 	if {$index >= 0} {
 		if {$active} {
-			#set args [lreplace $args $index [expr {$index}]]
 			vgm::vgm_rec_next
 			return
 		} else {
