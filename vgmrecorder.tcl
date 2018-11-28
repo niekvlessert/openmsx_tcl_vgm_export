@@ -5,8 +5,8 @@ variable psg_register
 variable opll_register
 variable y8950_register
 variable opl4_register_wave
-variable opl4_register_1
-variable opl4_register_2
+variable opl4_register
+variable active_fm_register -1
 
 variable start_time 0
 variable tick_time 0
@@ -22,21 +22,14 @@ variable y8950_logged     false
 variable moonsound_logged false
 variable scc_logged       false
 
-variable abort            false
-
 variable scc_plus_used
 
 variable watchpoints [list]
 
-variable active_fm_register -1
-
-variable loop_watch_point
 variable loop_amount 0
 variable position 0
 
 variable auto_next false
-
-variable file_number 1
 
 variable mbwave_title_hack       false
 variable mbwave_loop_hack	 false
@@ -47,11 +40,11 @@ variable supported_chips [list MSX-Music PSG Moonsound MSX-Audio SCC]
 set_help_proc vgm_rec [namespace code vgm_rec_help]
 proc vgm_rec_help {args} {
         switch -- [lindex $args 1] {
-                "start"    {return {VGM recording will be initiliased, specify one or more soundchips to record.
+                "start"    {return {VGM recording will be initialised, specify one or more soundchips to record.
 
 Syntax: vgm_rec start <MSX-Audio|MSX-Music|Moonsound|PSG|SCC>
 
-Actual recording will start when audio is detected to avoid silence at the beginning of the recording. This mechanism will only work if the MSX and/or playback routine does not send data to the soundchip when not playing, recording will start immediatly in those cases.
+Actual recording will start when audio is detected to avoid silence at the beginning of the recording. This mechanism will only work if the MSX and/or playback routine does not send data to the soundchip when not playing, recording will start immediately in those cases.
 }}
                 "stop" {return {Stop recording and save the data to the openMSX user directory in vgm_recordings. By default the filename will be music0001.vgm, when this exists music0002.vgm etc...
 
@@ -69,21 +62,21 @@ Syntax: vgm_rec next
 
 Syntax: vgm_rec auto_next
 }}
-                "prefix"   {return {Specify the prefix of the VGM files, instead of the default music
+                "prefix"   {return {Specify the prefix of the VGM files, instead of the default music.
 
 Syntax: vgm_rec prefix
 }}
-                "enable_hack"   {return {Enables one of three hacks; MBWave_basic_title, MBWave_title or MBWave_loop
+                "enable_hack"   {return {Enables one of three hacks; MBWave_basic_title, MBWave_title or MBWave_loop.
 
 Syntax: vgm_rec enable_hack <MBWave_basic_title|MBWave_title|MBWave_loop>
 
-MBWave_basic_title will change the filename written to the track title detected in  the OpenMSX memory when using the MBWave basic driver. MBWave_title will do the same when using MBWave itself. MBWave_loop will insert a vgm pokey command when the     tracks loops for the second time. This can be useful when it's hard to find the loop point using the vgmlpfnd tool from vgm_tools. When using vgm_cmp this otherwise     useless command will be optimised away.
+MBWave_basic_title will change the filename written to the track title detected in the openMSX memory when using the MBWave basic driver. MBWave_title will do the same when using MBWave itself. MBWave_loop will insert a vgm pokey command when the tracks loops for the second time. This can be useful when it's hard to find the loop point using the vgmlpfnd tool from vgm_tools. When using vgm_cmp this otherwise useless command will be optimised away.
 }}
-                "disable_hacks"   {return {Disable all hacks
+                "disable_hacks"   {return {Disable all hacks.
 
 Syntax: vgm_rec disable_hacks
 }}
-                default {return {Record a vgm file from audio playing in openMSX
+                default {return {Record a vgm file from audio playing in openMSX.
 
 Syntax: vgm_rec <sub-command> [arguments if needed]
 
@@ -107,10 +100,10 @@ set_tabcompletion_proc vgm_rec [namespace code tab_vgmrec]
 
 proc tab_vgmrec {args} {
 	variable supported_chips
-	if { [lsearch -exact $args "enable_hack"] >= 0 } {
+	if {[lsearch -exact $args "enable_hack"] >= 0} {
 		concat MBWave_title MBWave_loop MBWave_basic_title
 	} else {
-		if { [lsearch -exact $args "start"] >= 0 } {
+		if {[lsearch -exact $args "start"] >= 0} {
 			concat $supported_chips
 		} else {
 			concat start stop abort next auto_next prefix enable_hack disable_hacks
@@ -127,31 +120,16 @@ proc set_next_filename {} {
 proc vgm_rec_set_filename {filename} {
 	variable original_filename
 
-	if {[string last ".vgm" $filename] == -1} {
-		set original_filename $filename
-	} else {
-		set original_filename [string trim $filename ".vgm"]
+	if {[file extension $filename] eq ".vgm"} {
+		set filename [file rootname $filename]
 	}
+	set original_filename $filename
 	set_next_filename
 }
 
 vgm_rec_set_filename "music"
 
-set_help_text vgm_rec \
-"Starts recording VGM data. Most of the time this needs to be started before sound
-chip initialisation, otherwise it won't work.
-Supported soundchips: AY8910 (PSG), YM2413 (FMPAC, MSX-Music),
-Y8950 (Music Module, MSX-Audio), YMF278B (OPL4, Moonsound) and Konami SCC(+).
-Files will be stored in the openMSX home directory in a subdirectory vgm_recordings
-There a many parameters, use tab completion: vgm_rec [tab_vgmrec]
-Defaults: Record to music0001.vgm or music0002.vgm if that exists etc.
-You must end a recording with vgm_rec stop, otherwise the VGM file will be empty.
-There are many more parameters and features available, additional information at:
-https://github.com/niekvlessert/openmsx_tcl_vgm_export/blob/master/README.md
-"
-
 proc vgm_rec {args} {
-	variable abort            false
 	variable active
 	variable auto_next
 
@@ -166,133 +144,106 @@ proc vgm_rec {args} {
 	variable scc_logged
 
 	set prefix_index [lsearch -exact $args "prefix"]
-	if {$prefix_index >= 0 && $prefix_index < ([llength $args] - 1)} {
-		set prefix [lindex $args [expr {$prefix_index + 1}]]
-		set args [lreplace $args $prefix_index [expr {$prefix_index + 1}]]
-		vgm_rec_set_filename $prefix
+	if {$prefix_index >= 0} {
+		if {$prefix_index == ([llength $args] - 1)} {
+			error "Please specify prefix to use, see 'help vgm_rec prefix'."
+		}
+		vgm_rec_set_filename [lindex $args $prefix_index+1]
 		return
 	}
 
 	set hack_index [lsearch -exact $args "enable_hack"]
 	if {$hack_index >= 0} {
-		if {$hack_index < ([llength $args] - 1)} {
-			set hack [lindex $args [expr {$prefix_index + 1}]]
-			set args [lreplace $args $hack_index [expr {$prefix_index + 1}]]
-			foreach a $args {
-				if     {[string compare -nocase $a "MBWave_title"      ] == 0} {set mbwave_title_hack       true} \
-				elseif {[string compare -nocase $a "MBWave_loop"       ] == 0} {set mbwave_loop_hack        true} \
-				elseif {[string compare -nocase $a "MBWave_basic_title"] == 0} {set mbwave_basic_title_hack true} \
-				else {error "Hack not recognized, use tab completion"}
-			}
-			if { ($mbwave_title_hack || $mbwave_loop_hack) && ($mbwave_basic_title_hack) } {
-				vgm::vgm_disable_hacks
-				error "Don't combine those hacks... all hacks disabled to avoid problems"
-			}
-			puts "Enabled hack(s): $args."
-			return
-		} else {error "Please specify hack to activate, use tab completion"}
-	}
-
-	set index [lsearch -exact $args "disable_hacks"]
-	if {$index >= 0} {
-		vgm::vgm_disable_hacks
-		puts "Disabled all hacks."
-		return
-	}
-
-	set index [lsearch -exact $args "auto_next"]
-	if {$index >= 0} {
-		set auto_next true
-		puts "Enabled auto next feature"
-		return
-	}
-
-	set index [lsearch -exact $args "abort"]
-	if {$index >= 0} {
-		set abort true
-		vgm::vgm_rec_end
-		return
-	}
-
-	set index [lsearch -exact $args "stop"]
-	if {$index >= 0} {
-		vgm::vgm_rec_end
-		return
-	}
-
-	set index [lsearch -exact $args "next"]
-	if {$index >= 0} {
-		if {$active} {
-			vgm::vgm_rec_next
-			return
-		} else {
-			error "Not recording now...";
-			return
+		if {$hack_index == ([llength $args] - 1)} {
+			error "Please specify hack to activate, use tab completion."
 		}
+		foreach a [lrange $args $hack_index+1 end] {
+			if     {[string compare -nocase $a "MBWave_title"      ] == 0} {set mbwave_title_hack       true} \
+			elseif {[string compare -nocase $a "MBWave_loop"       ] == 0} {set mbwave_loop_hack        true} \
+			elseif {[string compare -nocase $a "MBWave_basic_title"] == 0} {set mbwave_basic_title_hack true} \
+			else {error "Hack '$a' not recognized, use tab completion."}
+		}
+		if {($mbwave_title_hack || $mbwave_loop_hack) && ($mbwave_basic_title_hack)} {
+			vgm::vgm_disable_hacks
+			error "Don't combine 'MBWave_basic_title' with other hacks... all hacks disabled to avoid problems."
+		}
+		return "Enabled hack(s): $args."
+	}
+
+	if {[lsearch -exact $args "disable_hacks"] >= 0} {
+		vgm::vgm_disable_hacks
+		return "Disabled all hacks."
+	}
+
+	if {[lsearch -exact $args "auto_next"] >= 0} {
+		set auto_next true
+		return "Enabled auto next feature."
+	}
+
+	if {[lsearch -exact $args "abort"] >= 0} {
+		return [vgm::vgm_rec_end true]
+	}
+
+	if {[lsearch -exact $args "stop"] >= 0} {
+		return [vgm::vgm_rec_end false]
+	}
+
+	if {[lsearch -exact $args "next"] >= 0} {
+		if {!$active} {
+			error "Not recording now..."
+		}
+		return [vgm::vgm_rec_next]
 	}
 
 	set index [lsearch -exact $args "start"]
 	if {$index >= 0} {
-		if {!$active} {
-			if {$index < ([llength $args] - 1)} {
-				set args [lreplace $args $index [expr {$index}]]
+		if {$active} {
+			error "Already recording, please stop it before running start again."
+		}
+		if {$index == ([llength $args] - 1)} {
+			error "Please choose at least one chip to record for, use tab completion."
+		}
+		set psg_logged       false
+		set fm_logged        false
+		set y8950_logged     false
+		set moonsound_logged false
+		set scc_logged       false
 
-				set psg_logged 		false
-				set fm_logged 		false
-				set y8950_logged 	false
-				set moonsound_logged 	false
-				set scc_logged		false
-
-				foreach a $args {
-					if     {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true} \
-					elseif {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true} \
-					elseif {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true} \
-					elseif {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true} \
-					elseif {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true} \
-					else {
-						error "Invalid chip to record for specified, use tab completion"
-						return
-					}
-				}
-			} else {
-				error "Please choose at least one chip to record for, use tab completion"
+		foreach a [lrange $args $index+1 end] {
+			if     {[string compare -nocase $a "PSG"      ] == 0} {set psg_logged       true} \
+			elseif {[string compare -nocase $a "MSX-Music"] == 0} {set fm_logged        true} \
+			elseif {[string compare -nocase $a "MSX-Audio"] == 0} {set y8950_logged     true} \
+			elseif {[string compare -nocase $a "Moonsound"] == 0} {set moonsound_logged true} \
+			elseif {[string compare -nocase $a "SCC"      ] == 0} {set scc_logged       true} \
+			else {
+				error "Invalid chip to record for specified, use tab completion"
 				return
 			}
-			vgm::vgm_rec_start
-			return
-		} else {
-			error "Already recording, please stop it before running start again"
 		}
+		return [vgm::vgm_rec_start]
 	}
 
 	error "Invalid input detected, use tab completion"
 }
 
 proc vgm_disable_hacks {} {
-        variable mbwave_title_hack
-        variable mbwave_loop_hack
-        variable mbwave_basic_title_hack
-
-	set mbwave_title_hack       false
-	set mbwave_loop_hack        false
-	set mbwave_basic_title_hack false
+        variable mbwave_title_hack       false
+        variable mbwave_loop_hack        false
+        variable mbwave_basic_title_hack false
 }
 
-
 proc vgm_rec_start {} {
-	variable active
-	if {$active} {
-		error "Already recording."
-	}
-	set active true
+	variable active true
 
 	variable auto_next
-	if { $auto_next } {
+	if {$auto_next} {
 		vgm::vgm_check_audio_data_written
 	}
 
 	variable mbwave_loop_hack
-	if { $mbwave_loop_hack } { vgm::vgm_log_loop_point }
+	if {$mbwave_loop_hack} {
+		vgm::vgm_log_loop_point
+	}
 
 	set_next_filename
 	variable directory
@@ -302,8 +253,7 @@ proc vgm_rec_start {} {
 	variable fm_register        -1
 	variable y8950_register     -1
 	variable opl4_register_wave -1
-	variable opl4_register_1    -1
-	variable opl4_register_2    -1
+	variable opl4_register      -1
 
 	variable ticks 0
 	variable music_data ""
@@ -312,35 +262,42 @@ proc vgm_rec_start {} {
 	variable scc_plus_used false
 
 	variable watchpoints
+
+	variable file_name
+	set recording_text "VGM recording initiated, start playback now, data will be recorded to $file_name for the following sound chips:"
+
 	variable psg_logged
 	if {$psg_logged} {
-		lappend watchpoints [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}]
-		lappend watchpoints [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0xA0 {} {vgm::write_psg_address}] \
+		                    [debug set_watchpoint write_io 0xA1 {} {vgm::write_psg_data}]
+		append recording_text " PSG"
 	}
 
 	variable fm_logged
 	if {$fm_logged} {
-		lappend watchpoints [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}]
-		lappend watchpoints [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0x7C {} {vgm::write_opll_address}] \
+		                    [debug set_watchpoint write_io 0x7D {} {vgm::write_opll_data}]
+		append recording_text " MSX-Music"
 	}
 
 	variable y8950_logged
 	if {$y8950_logged} {
-		lappend watchpoints [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}]
-		lappend watchpoints [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0xC0 {} {vgm::write_y8950_address}] \
+		                    [debug set_watchpoint write_io 0xC1 {} {vgm::write_y8950_data}]
 
 		# Save the sample RAM as a datablock. If loaded before starting the recording it's fine, if loaded afterward it'll be saved as vgm commands which will be optimised to datablock by the vgmtools
 		set y8950_ram [concat [machine_info output_port 0xC0] RAM]
 		if {[lsearch -exact [debug list] $y8950_ram] >= 0} {
 			set y8950_ram_size [debug size $y8950_ram]
 			if {$y8950_ram_size > 0} {
-				append temp_music_data [binary format ccc 0x67 0x66 0x88]
-				append temp_music_data [little_endian_32 [expr $y8950_ram_size + 8]]
-				append temp_music_data [little_endian_32 $y8950_ram_size]
-				append temp_music_data [zeros 4]
-				append temp_music_data [debug read_block $y8950_ram 0 $y8950_ram_size]
+				append temp_music_data [binary format ccc 0x67 0x66 0x88] \
+				                       [little_endian_32 [expr {$y8950_ram_size + 8}]] \
+				                       [little_endian_32 $y8950_ram_size] \
+				                       [zeros 4] \
+				                       [debug read_block $y8950_ram 0 $y8950_ram_size]
 			}
 		}
+		append recording_text " MSX-Audio"
 	}
 
 	# A thing: for wave to work some bits have to be set through FM2. So
@@ -352,29 +309,29 @@ proc vgm_rec_start {} {
 	# http://www.msxarchive.nl/pub/msx/docs/programming/opl4tech.txt
 	variable moonsound_logged
 	if {$moonsound_logged} {
-		lappend watchpoints [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}]
-		lappend watchpoints [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}]
-		lappend watchpoints [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}]
-		lappend watchpoints [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}]
-		lappend watchpoints [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}]
-		lappend watchpoints [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
+		lappend watchpoints [debug set_watchpoint write_io 0x7E {} {vgm::write_opl4_address_wave}] \
+		                    [debug set_watchpoint write_io 0x7F {} {vgm::write_opl4_data_wave}] \
+		                    [debug set_watchpoint write_io 0xC4 {} {vgm::write_opl4_address_1}] \
+		                    [debug set_watchpoint write_io 0xC5 {} {vgm::write_opl4_data}] \
+		                    [debug set_watchpoint write_io 0xC6 {} {vgm::write_opl4_address_2}] \
+		                    [debug set_watchpoint write_io 0xC7 {} {vgm::write_opl4_data}]
 
 		# Save the sample RAM as a datablock. If loaded before starting the recording it's fine, if loaded afterward it'll be saved as vgm commands which will be optimised to datablock by the vgmtools
 		set moonsound_ram [concat [machine_info output_port 0x7E] {wave RAM}]
 		if {[lsearch -exact [debug list] $moonsound_ram] >= 0} {
 			set moonsound_ram_size [debug size $moonsound_ram]
 			if {$moonsound_ram_size > 0} {
-				append temp_music_data [binary format ccc 0x67 0x66 0x87]
-				append temp_music_data [little_endian_32 [expr $moonsound_ram_size + 8]]
-				append temp_music_data [little_endian_32 $moonsound_ram_size]
-				append temp_music_data [zeros 4]
-				append temp_music_data [debug read_block $moonsound_ram 0 $moonsound_ram_size]
+				append temp_music_data [binary format ccc 0x67 0x66 0x87] \
+				                       [little_endian_32 [expr {$moonsound_ram_size + 8}]] \
+				                       [little_endian_32 $moonsound_ram_size] \
+				                       [zeros 4] \
+				                       [debug read_block $moonsound_ram 0 $moonsound_ram_size]
 
 				# enable OPL4 mode so it's enabled even if recorded vgm data won't do that
 				append temp_music_data [binary format cccc 0xD0 0x01 0x05 0x03]
 			}
 		}
-
+		append recording_text " Moondsound"
 	}
 
 	variable scc_logged
@@ -386,17 +343,11 @@ proc vgm_rec_start {} {
 				lappend watchpoints [debug set_watchpoint write_mem {0x9800 0x988F} "\[watch_in_slot $ps $ss\]" {vgm::scc_data}]
 			}
 		}
+		append recording_text " SCC"
 	}
 
-	variable file_name
-	set recording_text "VGM recording initiated, start playback now, data will be recorded to $file_name for the following sound chips:"
-	if {$psg_logged      } {append recording_text " PSG"       }
-	if {$fm_logged       } {append recording_text " MSX-Music" }
-	if {$y8950_logged    } {append recording_text " MSX-Audio" }
-	if {$moonsound_logged} {append recording_text " Moondsound"}
-	if {$scc_logged      } {append recording_text " SCC"       }
-	puts $recording_text
 	message $recording_text
+	return $recording_text
 }
 
 proc find_all_scc {} {
@@ -478,29 +429,23 @@ proc write_opl4_data_wave {} {
 }
 
 proc write_opl4_address_1 {} {
-	variable opl4_register_1 $::wp_last_value
+	variable opl4_register $::wp_last_value
+	variable active_fm_register 0
+}
+
+proc write_opl4_address_2 {} {
+	variable opl4_register $::wp_last_value
 	variable active_fm_register 1
 }
 
 proc write_opl4_data {} {
-	variable opl4_register_1
-	variable opl4_register_2
+	variable opl4_register
 	variable active_fm_register
-	variable music_data
-
-	if {($opl4_register_1 >= 0 && $active_fm_register == 1)} {
+	if {$opl4_register >= 0} {
 		update_time
-		append music_data [binary format cccc 0xD0 0x0 $opl4_register_1 $::wp_last_value]
+		variable music_data
+		append music_data [binary format cccc 0xD0 $active_fm_register $opl4_register $::wp_last_value]
 	}
-	if {($opl4_register_2 >= 0 && $active_fm_register == 2)} {
-		update_time
-		append music_data [binary format cccc 0xD0 0x1 $opl4_register_2 $::wp_last_value]
-	}
-}
-
-proc write_opl4_address_2 {} {
-	variable opl4_register_2 $::wp_last_value
-	variable active_fm_register 2
 }
 
 proc scc_data {} {
@@ -533,16 +478,13 @@ proc scc_data {} {
 	update_time
 
 	variable music_data
-	if {0x9800 <= $::wp_last_address && $::wp_last_address < 0x9880} {
+	if       {0x9800 <= $::wp_last_address && $::wp_last_address < 0x9880} {
 		append music_data [binary format cccc 0xD2 0x0 [expr {$::wp_last_address - 0x9800}] $::wp_last_value]
-	}
-	if {0x9880 <= $::wp_last_address && $::wp_last_address < 0x988A} {
+	} elseif {0x9880 <= $::wp_last_address && $::wp_last_address < 0x988A} {
 		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0x9880}] $::wp_last_value]
-	}
-	if {0x988A <= $::wp_last_address && $::wp_last_address < 0x988F} {
+	} elseif {0x988A <= $::wp_last_address && $::wp_last_address < 0x988F} {
 		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0x988A}] $::wp_last_value]
-	}
-	if {$::wp_last_address == 0x988F} {
+	} elseif {$::wp_last_address == 0x988F} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 }
@@ -576,16 +518,13 @@ proc scc_plus_data {} {
 	update_time
 
 	variable music_data
-	if {0xB800 <= $::wp_last_address && $::wp_last_address < 0xB8A0} {
+	if       {0xB800 <= $::wp_last_address && $::wp_last_address < 0xB8A0} {
 		append music_data [binary format cccc 0xD2 0x4 [expr {$::wp_last_address - 0xB800}] $::wp_last_value]
-	}
-	if {0xB8A0 <= $::wp_last_address && $::wp_last_address < 0xb8aa} {
+	} elseif {0xB8A0 <= $::wp_last_address && $::wp_last_address < 0xb8aa} {
 		append music_data [binary format cccc 0xD2 0x1 [expr {$::wp_last_address - 0xB8A0}] $::wp_last_value]
-	}
-	if {0xB8AA <= $::wp_last_address && $::wp_last_address < 0xB8AF} {
+	} elseif {0xB8AA <= $::wp_last_address && $::wp_last_address < 0xB8AF} {
 		append music_data [binary format cccc 0xD2 0x2 [expr {$::wp_last_address - 0xB8AA}] $::wp_last_value]
-	}
-	if {$::wp_last_address == 0xB8AF} {
+	} elseif {$::wp_last_address == 0xB8AF} {
 		append music_data [binary format cccc 0xD2 0x3 0x0 $::wp_last_value]
 	}
 
@@ -596,9 +535,7 @@ proc update_time {} {
 	variable start_time
 	if {$start_time == 0} {
 		set start_time [machine_info time]
-		set msg "VGM recording started, data was written to one of the sound chips recording for."
-		puts $msg
-		message $msg
+		message "VGM recording started, data was written to one of the sound chips recording for."
 	}
 
 	variable tick_time
@@ -620,15 +557,10 @@ proc update_time {} {
 	}
 }
 
-proc vgm_rec_end {} {
+proc vgm_rec_end {abort} {
 	variable active
-	variable abort
-
 	if {!$active} {
-		set stop_message "Not recording currently..."
-		error $stop_message
-		message $stop_message
-		return
+		error "Not recording currently..."
 	}
 
 	# remove all watchpoints that were created
@@ -640,27 +572,22 @@ proc vgm_rec_end {} {
 			puts "Failed to remove watchpoint $watch... using savestates maybe? Continue anyway."
 		}
 	}
-	variable watchpoints [list]
+	set watchpoints [list]
 
 	if {!$abort} {
-
 		update_time
 
-		variable tick_time
-		set tick_time 0
-
+		variable tick_time 0
 		variable music_data
 		variable temp_music_data 
 
-		append temp_music_data $music_data
-		append temp_music_data [binary format c 0x66]
+		append temp_music_data $music_data [binary format c 0x66]
 
 		set header "Vgm "
 		# file size
 		append header [little_endian_32 [expr {[string length $temp_music_data] + 0x100 - 4}]]
 		# VGM version 1.7
-		append header [little_endian_32 0x161]
-		append header [zeros 4]
+		append header [little_endian_32 0x161] [zeros 4]
 
 		# YM2413 clock
 		variable fm_logged
@@ -677,8 +604,7 @@ proc vgm_rec_end {} {
 		set ticks 0
 		append header [zeros 24]
 		# Data starts at offset 0x100
-		append header [little_endian_32 [expr {0x100 - 0x34}]]
-		append header [zeros 32]
+		append header [little_endian_32 [expr {0x100 - 0x34}]] [zeros 32]
 
 		# Y8950 clock
 		variable y8950_logged
@@ -731,16 +657,10 @@ proc vgm_rec_end {} {
 		variable directory
 
 		# Title hacks
-
-		# Mbwave Title
 		variable mbwave_title_hack
-		if {$mbwave_title_hack} {set title_address 0xffc6}
-
-		# Mbwave basic driver
 		variable mbwave_basic_title_hack
-		if {$mbwave_title_hack} {set title_address 0xc0dc}
-
 		if {$mbwave_title_hack || $mbwave_basic_title_hack} {
+			set title_address [expr {$mbwave_title_hack ? 0xffc6 : 0xc0dc}]
 			set file_name [string map {/ -} [debug read_block "Main RAM" $title_address 0x32]]
 			set file_name [string trim $file_name]
 			set file_name [format %s%s%s%s $directory "/" $file_name ".vgm"]
@@ -752,53 +672,44 @@ proc vgm_rec_end {} {
 		puts -nonewline $file_handle $temp_music_data
 		close $file_handle
 
-
 		set stop_message "VGM recording stopped, wrote data to $file_name."
 	} else {
 		set stop_message "VGM recording aborted, no data written..."
 	}
 
-	puts $stop_message
-	message $stop_message
-
 	set active false
+	variable start_time 0
+	variable loop_amount 0
 
-	variable start_time
-	set start_time 0
-
-	variable loop_amount
-	set loop_amount 0
+	message $stop_message
+	return $stop_message
 }
 
 proc vgm_rec_next {} {
 	variable active
 	if {!$active} {
-		variable original_filename music
+		variable original_filename "music"
 	} else {
-		vgm_rec_end
+		vgm_rec_end false
 	}
-
 	vgm_rec_start
 }
 
 # Generic function to check if audio data is still written when recording is active. If not for a second, assume end recording, and start recording next if this is wanted
 proc vgm_check_audio_data_written {} {
-	variable tick_time
 	variable active
-	variable auto_next
+	if {!$active} return
 
-	if { $active } {
-		set now [machine_info time]
-		if { $tick_time == 0 || $now - $tick_time < 1 } {
-			after time 1 vgm::vgm_check_audio_data_written
-		} else {
-			vgm::vgm_rec_end
-			if { $auto_next } {
-				set auto_next_text "auto_next feature active, starting next recording"
-				puts $auto_next_text
-				message $auto_next_text
-				vgm::vgm_rec_start
-			}
+	variable tick_time
+	variable auto_next
+	set now [machine_info time]
+	if {$tick_time == 0 || $now - $tick_time < 1} {
+		after time 1 vgm::vgm_check_audio_data_written
+	} else {
+		vgm::vgm_rec_end false
+		if {$auto_next} {
+			message "auto_next feature active, starting next recording"
+			vgm::vgm_rec_start
 		}
 	}
 }
@@ -810,41 +721,37 @@ proc vgm_log_loop_point {} {
 }
 
 proc vgm_check_loop_point {} {
-	variable position
-	variable loop_amount
-
         variable start_time
-        if {$start_time != 0} {
-		set position_new $::wp_last_value
-		if { $position_new == 255 } { set position_new 0 }
-		if { $position_new < $position } {
-			after time 1 vgm::vgm_log_loop_in_music_data
-		}
-		set position $position_new
+        if {$start_time == 0} return
+
+	variable position
+	set position_new [expr {$::wp_last_value == 255 ? 0 : $::wp_last_value}]
+	if {$position_new < $position} {
+		after time 1 vgm::vgm_log_loop_in_music_data
 	}
+	set position $position_new
 }
 
 proc vgm_log_loop_in_music_data {} {
 	variable start_time
-        if {$start_time != 0} {
-		variable loop_amount
-		incr loop_amount
-		variable music_data
-		append music_data [binary format ccc 0xbb 0xbb 0xbb]
-		if { $loop_amount == 1 } {
-			puts "First loop: Tracklength in seconds (if not using transposing..): [expr [machine_info time]-$start_time]. Marker inserted in VGM file."
-		}
-		if { $loop_amount == 2 } {
-			puts "Second loop. Marker inserted in VGM file."
-		}
-		if { $loop_amount > 2 } {
-			keymatrixdown 7 4
-			puts "Third loop occured, stop playback."
-			variable position
-			set position 0
-			set loop_amount 0
-			after time 1 { keymatrixup 7 4 }
-		}
+        if {$start_time == 0} return
+
+	variable loop_amount
+	incr loop_amount
+	variable music_data
+	append music_data [binary format ccc 0xbb 0xbb 0xbb]
+	if {$loop_amount == 1} {
+		message "First loop: Track-length in seconds (if not using transposing..): [expr {[machine_info time] - $start_time}]. Marker inserted in VGM file."
+	}
+	if {$loop_amount == 2} {
+		message "Second loop. Marker inserted in VGM file."
+	}
+	if {$loop_amount > 2} {
+		keymatrixdown 7 4
+		message "Third loop occurred, stop playback."
+		variable position 0
+		set loop_amount 0
+		after time 1 {keymatrixup 7 4}
 	}
 }
 
