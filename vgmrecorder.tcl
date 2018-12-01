@@ -58,7 +58,7 @@ Syntax: vgm_rec abort
 
 Syntax: vgm_rec next
 }}
-                "auto_next"   {return {Enables the auto_next recording; if no data is being send to the chip for more then 2 seconds, the next recording will be started.
+                "auto_next"   {return {Enables the auto_next recording; if no data is being send to the chip for more then 2 seconds, the next recording will be started. Add false parameter to disable it if it's active.
 
 Syntax: vgm_rec auto_next
 }}
@@ -175,7 +175,25 @@ proc vgm_rec {args} {
 		return "Disabled all hacks."
 	}
 
-	if {[lsearch -exact $args "auto_next"] >= 0} {
+	set auto_next_index [lsearch -exact $args "auto_next"]
+	if {$auto_next_index >= 0} {
+		if {$auto_next_index < [llength $args] - 1} {
+			set auto_next_parameter [lindex $args end]
+			if { $auto_next_parameter == "false"} {
+				if {$auto_next == true} {
+					set auto_next false
+					return "Disabled auto_next feature."
+				} else {
+					error "Auto_next is not active, can't disable it."
+				}
+			} else {
+				error "Wrong parameter"
+			}
+		}
+
+		if { $active } {
+			error "Auto_next can't be actived during recording, abort/stop the current recording and try again."
+		}
 		set auto_next true
 		return "Enabled auto next feature."
 	}
