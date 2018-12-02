@@ -177,25 +177,13 @@ proc vgm_rec {args} {
 
 	set auto_next_index [lsearch -exact $args "auto_next"]
 	if {$auto_next_index >= 0} {
-		if {$auto_next_index < [llength $args] - 1} {
-			set auto_next_parameter [lindex $args end]
-			if { $auto_next_parameter == "false"} {
-				if {$auto_next == true} {
-					set auto_next false
-					return "Disabled auto_next feature."
-				} else {
-					error "Auto_next is not active, can't disable it."
-				}
-			} else {
-				error "Wrong parameter"
-			}
-		}
-
-		if { $active } {
+		set param [lindex $args $auto_next_index+1] ;# empty if past end
+		set paramBool [expr {($param eq "") ? true : bool($param)}]
+		if {$active && $paramBool} {
 			error "Auto_next can't be actived during recording, abort/stop the current recording and try again."
 		}
-		set auto_next true
-		return "Enabled auto next feature."
+		set auto_next $paramBool
+		return "[expr {$auto_next ? "Enabled" : "Disabled"}] auto_next feature."
 	}
 
 	if {[lsearch -exact $args "abort"] >= 0} {
