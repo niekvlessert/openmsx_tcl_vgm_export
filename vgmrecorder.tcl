@@ -58,7 +58,7 @@ Syntax: vgm_rec abort
 
 Syntax: vgm_rec next
 }}
-                "auto_next"   {return {Enables the auto_next recording; if no data is being send to the chip for more then 2 seconds, the next recording will be started. Optional argument true/false, defaults to true.
+                "auto_next"   {return {Enables the auto_next recording; if no data is being sent to the chip for more than 2 seconds, the next recording will be started. Optional argument true/false, defaults to true.
 
 Syntax: vgm_rec auto_next
 }}
